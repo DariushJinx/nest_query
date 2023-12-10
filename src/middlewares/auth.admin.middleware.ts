@@ -39,7 +39,7 @@ export class AdminAuthMiddleware implements NestMiddleware {
             const admin = await this.adminService.findAdminByEmail(email);
             if (!admin) {
               throw new HttpException(
-                'وارد حساب کاربری خود شوید...',
+                'وارد حساب کاربری خود شوید',
                 HttpStatus.UNAUTHORIZED,
               );
             }

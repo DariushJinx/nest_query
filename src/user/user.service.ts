@@ -84,21 +84,15 @@ export class UserService {
     return user;
   }
 
-  async loginUser(loginDto: LoginDto): Promise<UserEntity> {
+  async loginUser(loginDto: LoginDto) {
     const errorResponse = {
       errors: {},
     };
 
-    const user = await this.userRepository.findOne({
-      select: {
-        password: true,
-        email: true,
-        isBan: true,
-      },
-      where: {
-        email: loginDto.email,
-      },
-    });
+    const query = `select email,password from users where email = '${loginDto.email}' limit 1`;
+
+    const users = await this.userRepository.query(query);
+    const user = users[0];
 
     if (!user) {
       errorResponse.errors['user'] =
@@ -120,15 +114,16 @@ export class UserService {
         'ایمیل و یا رمز عبور وارد شده صحیح نمی باشد';
       throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
-
     delete user.password;
     return user;
   }
 
   async banUser(admin: AdminEntity, id: number) {
-    const user = await this.userRepository.findOne({
-      where: { id: id },
-    });
+    const query = `select * from users where id = ${id}`;
+
+    const users = await this.userRepository.query(query);
+
+    const user = users[0];
 
     if (!user) {
       throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
@@ -141,6 +136,13 @@ export class UserService {
       );
     }
 
+    if (user.isBan === '1') {
+      throw new HttpException(
+        'کاربر مورد نظر مسدود می باشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     user.isBan = '1';
 
     await this.userRepository.save(user);
@@ -150,16 +152,16 @@ export class UserService {
   }
 
   async userList(admin: AdminEntity, query: any) {
-    // if (!admin) {
-    //   throw new HttpException(
-    //     'شما مجاز به فعالیت در این بخش نیستید',
-    //     HttpStatus.NOT_FOUND,
-    //   );
-    // }
+    if (!admin) {
+      throw new HttpException(
+        'شما مجاز به فعالیت در این بخش نیستید',
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
-    let findAll;
+    let findAll: string;
 
-    findAll = `select * from users`;
+    findAll = `select * from users order by id desc`;
 
     if (query.search) {
       findAll = `select * from users where username = '${query.search}'`;
@@ -174,12 +176,13 @@ export class UserService {
     }
 
     const users = await this.userRepository.query(findAll);
+    const usersCount = await this.userRepository.count();
 
     users.forEach((user: UserEntity) => {
       delete user.password;
     });
 
-    return users;
+    return { users, usersCount };
   }
 
   async findByID(id: number): Promise<UserEntity> {

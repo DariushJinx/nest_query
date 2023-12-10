@@ -39,13 +39,13 @@ export class UserController {
 
   @Put('user/ban/:id')
   @UseGuards(AdminAuthGuard)
-  async followProfile(@Admin() admin: AdminEntity, @Param('id') id: number) {
+  async banUser(@Admin() admin: AdminEntity, @Param('id') id: number) {
     const user = await this.userService.banUser(admin, id);
     return await this.userService.buildBanAdminResponse(user);
   }
 
   @Get('users/list')
-  // @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard)
   async listOfUsers(@Admin() admin: AdminEntity, @Query() query: any) {
     const users = await this.userService.userList(admin, query);
     return users;

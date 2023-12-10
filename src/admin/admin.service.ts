@@ -88,16 +88,10 @@ export class AdminService {
       errors: {},
     };
 
-    const admin = await this.adminRepository.findOne({
-      select: {
-        password: true,
-        email: true,
-        isBan: true,
-      },
-      where: {
-        email: loginDto.email,
-      },
-    });
+    const query = `select * from admin where email = '${loginDto.email}' limit 1`;
+
+    const admins = await this.adminRepository.query(query);
+    const admin = admins[0];
 
     if (!admin) {
       errorResponse.errors['admin'] =
@@ -123,9 +117,10 @@ export class AdminService {
   }
 
   async banAdmin(currentAdmin: AdminEntity, id: number) {
-    const admin = await this.adminRepository.findOne({
-      where: { id: id },
-    });
+    const query = `select * from admin where id = ${id}`;
+
+    const admins = await this.adminRepository.query(query);
+    const admin = admins[0];
 
     if (!admin) {
       throw new HttpException(
@@ -141,36 +136,45 @@ export class AdminService {
       );
     }
 
+    if (admin.isBan === '1') {
+      throw new HttpException(
+        'کاربر مورد نظر مسدود می باشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     admin.isBan = '1';
 
     await this.adminRepository.save(admin);
-
     delete admin.password;
 
     return admin;
   }
 
   async findAdminByID(id: number): Promise<AdminEntity> {
-    const admin = await this.adminRepository.findOne({
-      where: { id: id },
+    const query = `select * from admin where id='${id}'`;
+    const admins = await this.adminRepository.query(query);
+    let adminResult: AdminEntity;
+
+    admins.forEach((admin: AdminEntity) => {
+      adminResult = admin;
+      if (!admin) {
+        throw new HttpException(
+          'ادمین مورد نظر یافت نشد',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
     });
 
-    if (!admin) {
-      throw new HttpException(
-        'ادمین مورد نظر یافت نشد',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
+    delete adminResult.password;
 
-    delete admin.password;
-
-    return admin;
+    return adminResult;
   }
 
   async findAdminByEmail(email: string): Promise<AdminEntity> {
-    const admin = await this.adminRepository.findOne({
-      where: { email: email },
-    });
+    const query = `select * from admin where email = '${email}' limit 1`;
+    const admins = await this.adminRepository.query(query);
+    const admin = admins[0];
 
     if (!admin) {
       throw new HttpException(

@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -44,5 +47,21 @@ export class AdminController {
   async banAdmin(@Admin() currentAdmin: AdminEntity, @Param('id') id: number) {
     const admin = await this.adminService.banAdmin(currentAdmin, id);
     return await this.adminService.buildBanAdminResponse(admin);
+  }
+
+  @Delete('admin/:id')
+  @UseGuards(AdminAuthGuard)
+  async removeUser(@Admin() admin: AdminEntity, @Param('id') id: number) {
+    await this.adminService.removeAdmin(admin, id);
+    return {
+      message: 'ادمین مورد نظر با موفقیت حذف شد',
+    };
+  }
+
+  @Get('admins/list')
+  @UseGuards(AdminAuthGuard)
+  async listOfUsers(@Admin() admin: AdminEntity, @Query() query: any) {
+    const admins = await this.adminService.adminList(admin, query);
+    return admins;
   }
 }

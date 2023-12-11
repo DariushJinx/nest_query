@@ -117,28 +117,29 @@ export class AdminService {
   }
 
   async banAdmin(currentAdmin: AdminEntity, id: number) {
-    const query = `select * from admin where id = ${id}`;
-
-    const admins = await this.adminRepository.query(query);
-    const admin = admins[0];
+    const admin = await this.findAdminByID(id);
 
     if (!admin) {
-      throw new HttpException(
-        'ادمین مورد نظر موجود نمی باشد',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('ادمین مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
     if (!currentAdmin) {
       throw new HttpException(
-        'شما مجاز به بن کردن کاربر نمی باشید',
+        'شما مجاز به بن کردن ادمین نمی باشید',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (currentAdmin.id === admin.id) {
+      throw new HttpException(
+        'شما مجاز به بن کردن خودتان نمی باشید',
         HttpStatus.UNAUTHORIZED,
       );
     }
 
     if (admin.isBan === '1') {
       throw new HttpException(
-        'کاربر مورد نظر مسدود می باشد',
+        'ادمین مورد نظر مسدود می باشد',
         HttpStatus.NOT_FOUND,
       );
     }
@@ -151,24 +152,80 @@ export class AdminService {
     return admin;
   }
 
+  async adminList(admin: AdminEntity, query: any) {
+    if (!admin) {
+      throw new HttpException(
+        'شما مجاز به فعالیت در این بخش نیستید',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let findAll: string;
+
+    findAll = `select * from admin order by id desc`;
+
+    if (query.search) {
+      findAll = `select * from admin where username = '${query.search}'`;
+    }
+
+    if (query.limit) {
+      findAll = `select * from admin limit ${query.limit}`;
+    }
+
+    if (query.offset) {
+      findAll = `select * from admin offset ${query.offset}`;
+    }
+
+    const admins = await this.adminRepository.query(findAll);
+    const adminsCount = await this.adminRepository.count();
+
+    admins.forEach((admin: AdminEntity) => {
+      delete admin.password;
+    });
+
+    return { admins, adminsCount };
+  }
+
+  async removeAdmin(admin: AdminEntity, id: number) {
+    if (!admin) {
+      throw new HttpException(
+        'شما مجاز به حذف کردن ادمین نمی باشید',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const adminResult = await this.findAdminByID(id);
+
+    if (adminResult.id === admin.id) {
+      throw new HttpException(
+        'شما مجاز به حذف خودتان نمی باشید',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    await this.adminRepository.delete({ id });
+
+    return {
+      message: 'ادمین مورد نظر با موفقیت حذف شد',
+    };
+  }
+
   async findAdminByID(id: number): Promise<AdminEntity> {
     const query = `select * from admin where id='${id}'`;
     const admins = await this.adminRepository.query(query);
-    let adminResult: AdminEntity;
 
-    admins.forEach((admin: AdminEntity) => {
-      adminResult = admin;
-      if (!admin) {
-        throw new HttpException(
-          'ادمین مورد نظر یافت نشد',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-    });
+    const admin = admins[0];
 
-    delete adminResult.password;
+    if (!admin) {
+      throw new HttpException(
+        'ادمین مورد نظر یافت نشد',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
 
-    return adminResult;
+    delete admin.password;
+
+    return admin;
   }
 
   async findAdminByEmail(email: string): Promise<AdminEntity> {

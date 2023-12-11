@@ -119,15 +119,7 @@ export class UserService {
   }
 
   async banUser(admin: AdminEntity, id: number) {
-    const query = `select * from users where id = ${id}`;
-
-    const users = await this.userRepository.query(query);
-
-    const user = users[0];
-
-    if (!user) {
-      throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    const user = await this.findByID(id);
 
     if (!admin) {
       throw new HttpException(
@@ -149,6 +141,23 @@ export class UserService {
     delete user.password;
 
     return user;
+  }
+
+  async removeUser(admin: AdminEntity, id: number) {
+    if (!admin) {
+      throw new HttpException(
+        'شما مجاز به حذف کردن کاربر نمی باشید',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    await this.findByID(id);
+
+    await this.userRepository.delete({ id });
+
+    return {
+      message: 'کاربر مورد نظر با موفقیت حذف شد',
+    };
   }
 
   async userList(admin: AdminEntity, query: any) {
@@ -186,9 +195,16 @@ export class UserService {
   }
 
   async findByID(id: number): Promise<UserEntity> {
-    return await this.userRepository.findOne({
-      where: { id: id },
-    });
+    const query = `select * from users where id='${id}' limit 1`;
+
+    const users = await this.userRepository.query(query);
+    const user = users[0];
+
+    if (!user) {
+      throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    return user;
   }
 
   async findByEmail(email: string): Promise<UserEntity> {

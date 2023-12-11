@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -42,6 +43,15 @@ export class UserController {
   async banUser(@Admin() admin: AdminEntity, @Param('id') id: number) {
     const user = await this.userService.banUser(admin, id);
     return await this.userService.buildBanAdminResponse(user);
+  }
+
+  @Delete('user/:id')
+  @UseGuards(AdminAuthGuard)
+  async removeUser(@Admin() admin: AdminEntity, @Param('id') id: number) {
+    await this.userService.removeUser(admin, id);
+    return {
+      message: 'کاربر مورد نظر با موفقیت حذف شد',
+    };
   }
 
   @Get('users/list')

@@ -6,6 +6,8 @@ import ormconfig from './ormconfig';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { AdminModule } from './admin/admin.module';
+import { BlogCategoryModule } from './blogCategory/blogCategory.module';
+import { BlogModule } from './blog/blog.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AdminModule } from './admin/admin.module';
     }),
     UserModule,
     AdminModule,
+    BlogCategoryModule,
+    BlogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

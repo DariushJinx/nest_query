@@ -90,63 +90,70 @@ export class BlogService {
   }
 
   async findAllBlogs(query: any): Promise<BlogsResponseInterface> {
-    const queryBuilder = this.blogRepository
-      .createQueryBuilder('blog')
-      .leftJoinAndSelect('blog.author', 'author');
+    let findAll: string;
 
-    if (query.search) {
-      queryBuilder.andWhere('blog.tags LIKE :search', {
-        search: `%${query.search}`,
-      });
-    }
-
-    if (query.tag) {
-      queryBuilder.andWhere('blog.tags LIKE :tag', {
-        tag: `%${query.tag}`,
-      });
-    }
+    findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    order by blog.id desc`;
 
     if (query.author) {
-      const author = await this.adminRepository.findOne({
-        where: { username: query.author },
-      });
-      if (!author) {
-        throw new HttpException(
-          'مقاله ای با این نویسنده یافت نشد',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      queryBuilder.andWhere('blog.authorId = :id', {
-        id: author.id,
-      });
+      findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    where a.username = '${query.author}'`;
+    }
+
+    if (query.search) {
+      findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    where blog.title = '${query.search}'`;
     }
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    limit ${query.limit}`;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    offset ${query.offset}`;
     }
 
-    queryBuilder.orderBy('blog.createdAt', 'DESC');
+    if (query.offset && query.limit) {
+      findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id limit ${query.limit}
+    offset ${query.offset}`;
+    }
 
-    const blogsCount = await queryBuilder.getCount();
-    const blogs = await queryBuilder.getMany();
+    const blogs = await this.blogRepository.query(findAll);
 
     if (!blogs.length) {
-      throw new HttpException('مقاله ای یافت نشد', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'دسته بندی ای با این نویسنده یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    blogs.forEach((blog) => {
-      delete blog.author.id;
-      delete blog.author.first_name;
-      delete blog.author.last_name;
-      delete blog.author.mobile;
-      delete blog.author.isBan;
-      delete blog.author.email;
-      delete blog.author.password;
-    });
+    const blogsCount = await this.blogRepository.count();
 
     return { blogs, blogsCount };
   }
@@ -210,65 +217,27 @@ export class BlogService {
   //   return allBlogs;
   // }
 
-  async getOneBlogWithSlug(slug: string): Promise<BlogEntity> {
-    const blog = await this.blogRepository.findOne({
-      where: { slug: slug },
-      relations: ['comments'],
-    });
+  async getOneBlogWithId(id: number): Promise<BlogEntity> {
+    const query = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    where blog.id = ${id}`;
+
+    const blogs = await this.blogRepository.query(query);
+    console.log('blogs: ', blogs);
+    const blog = blogs[0];
 
     if (!blog) {
       throw new HttpException('مقاله ای یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    delete blog.category.id;
-    delete blog.category.images;
-    delete blog.category.register;
-    delete blog.category.parent;
-    delete blog.category.isLast;
-    delete blog.category.tree_cat;
-    delete blog.category.createdAt;
-    delete blog.category.updatedAt;
-    delete blog.author.id;
-    delete blog.author.first_name;
-    delete blog.author.last_name;
-    delete blog.author.mobile;
-    delete blog.author.isBan;
-    delete blog.author.email;
-    delete blog.author.password;
-
     return blog;
   }
 
-  async getOneBlogWithID(id: number): Promise<BlogEntity> {
-    const blog = await this.blogRepository.findOne({
-      where: { id: id },
-    });
-
-    if (!blog) {
-      throw new HttpException('مقاله ای یافت نشد', HttpStatus.NOT_FOUND);
-    }
-
-    delete blog.category.id;
-    delete blog.category.images;
-    delete blog.category.register;
-    delete blog.category.parent;
-    delete blog.category.isLast;
-    delete blog.category.tree_cat;
-    delete blog.category.createdAt;
-    delete blog.category.updatedAt;
-    delete blog.author.id;
-    delete blog.author.first_name;
-    delete blog.author.last_name;
-    delete blog.author.mobile;
-    delete blog.author.isBan;
-    delete blog.author.email;
-    delete blog.author.password;
-
-    return blog;
-  }
-
-  async deleteOneBlogWithSlug(
-    slug: string,
+  async deleteOneBlogWithId(
+    id: number,
     admin: AdminEntity,
   ): Promise<{ message: string }> {
     if (!admin) {
@@ -278,12 +247,15 @@ export class BlogService {
       );
     }
 
-    const blog = await this.getOneBlogWithSlug(slug);
-    if (!blog) {
-      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    const query = `delete from blog where id = ${id}`;
 
-    await this.blogRepository.delete({ slug });
+    const removeBlog = await this.blogRepository.query(query);
+
+    if (removeBlog[1] === 0)
+      throw new HttpException(
+        'دسته بندی مورد نظر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
 
     return {
       message: 'مقاله مورد نظر با موفقیت حذف گردید',
@@ -300,13 +272,10 @@ export class BlogService {
       errors: {},
     };
 
-    const blog = await this.getOneBlogWithID(id);
-
-    if (!blog) {
-      errorResponse.errors['blog'] = 'مقاله مورد نظر یافت نشد';
-      errorResponse.errors['statusCode'] = HttpStatus.NOT_FOUND;
-      throw new HttpException(errorResponse, HttpStatus.NOT_FOUND);
-    }
+    const images = FunctionUtils.ListOfImagesForRequest(
+      files,
+      updateBlogDto.fileUploadPath,
+    );
 
     if (!admin) {
       errorResponse.errors['admin'] = 'شما مجاز به به روز رسانی مقاله نیستید';
@@ -314,32 +283,18 @@ export class BlogService {
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    const images = FunctionUtils.ListOfImagesForRequest(
-      files,
-      updateBlogDto.fileUploadPath,
-    );
+    const query = `UPDATE blog SET title = '${updateBlogDto.title}', short_title = '${updateBlogDto.short_title}',
+    text = '${updateBlogDto.text}',
+    short_text = '${updateBlogDto.short_text}'
+    where id = ${id} RETURNING *`;
+    const result = await this.blogRepository.query(query);
 
-    Object.assign(blog, updateBlogDto);
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.blogRepository.save(result[0][0]);
+    }
 
-    delete blog.category.id;
-    delete blog.category.images;
-    delete blog.category.register;
-    delete blog.category.parent;
-    delete blog.category.isLast;
-    delete blog.category.tree_cat;
-    delete blog.category.createdAt;
-    delete blog.category.updatedAt;
-    delete blog.author.id;
-    delete blog.author.first_name;
-    delete blog.author.last_name;
-    delete blog.author.mobile;
-    delete blog.author.isBan;
-    delete blog.author.email;
-    delete blog.author.password;
-
-    blog.images = images;
-
-    return await this.blogRepository.save(blog);
+    return result[0][0];
   }
 
   async favoriteBlog(blogId: number, currentUser: number) {
@@ -347,7 +302,7 @@ export class BlogService {
       where: { id: currentUser },
       relations: ['blog_bookmarks'],
     });
-    const blog = await this.getOneBlogWithID(blogId);
+    const blog = await this.getOneBlogWithId(blogId);
 
     if (!blog) {
       throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
@@ -376,7 +331,7 @@ export class BlogService {
 
     if (isNotFavorite) {
       user.blog_bookmarks.push(blog);
-      blog.favoritesCount++;
+      blog.favorites_count++;
       await this.userRepository.save(user);
       await this.blogRepository.save(blog);
     }
@@ -389,7 +344,7 @@ export class BlogService {
       where: { id: currentUser },
       relations: ['blog_bookmarks'],
     });
-    const blog = await this.getOneBlogWithID(blogId);
+    const blog = await this.getOneBlogWithId(blogId);
 
     if (!blog) {
       throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
@@ -401,10 +356,10 @@ export class BlogService {
 
     if (blogIndex >= 0) {
       user.blog_bookmarks.splice(blogIndex, 1);
-      if (blog.favoritesCount < 0) {
-        blog.favoritesCount = 0;
+      if (blog.favorites_count < 0) {
+        blog.favorites_count = 0;
       }
-      blog.favoritesCount--;
+      blog.favorites_count--;
       await this.userRepository.save(user);
       await this.blogRepository.save(blog);
     }

@@ -90,7 +90,9 @@ export class BlogCategoryService {
     return saveCategory;
   }
 
-  async getListOfCategories(query: any) {
+  async getListOfCategories(
+    query: any,
+  ): Promise<BlogCategoriesResponseInterface> {
     let findAll: string;
 
     findAll = `select bc.*,
@@ -281,14 +283,18 @@ export class BlogCategoryService {
     // const query = `UPDATE blog_category SET title = '${updateCategoryDto.title}', images = '${images}' from blog_category
     // left join admin a on blog_category.register_id = a.id where id = ${id} RETURNING *`;
 
-    const query = `update blog_category set title = '${updateCategoryDto.title}', images = '${images}' where id = ${id} RETURNING *`;
-    const result = await this.categoryRepository.query(query);
-
     if (!admin) {
       errorResponse.errors['admin'] =
         'شما مجاز به به روز رسانی دسته بندی نیستید';
       errorResponse.errors['statusCode'] = HttpStatus.FORBIDDEN;
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
+    }
+    const query = `UPDATE blog_category SET title = '${updateCategoryDto.title}' where id = ${id} RETURNING *`;
+    const result = await this.categoryRepository.query(query);
+
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.categoryRepository.save(result[0][0]);
     }
 
     return result[0][0];

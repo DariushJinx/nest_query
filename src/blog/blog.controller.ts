@@ -11,6 +11,7 @@ import {
   Param,
   Delete,
   Put,
+  Patch,
 } from '@nestjs/common';
 import { BlogService } from './blog.service';
 import { User } from '../decorators/user.decorators';
@@ -53,28 +54,28 @@ export class BlogController {
   //   return await this.blogService.findAllBlogsWithRating();
   // }
 
-  @Get(':slug')
-  async getOneBlogWithSlug(
-    @Param('slug') slug: string,
+  @Get(':id')
+  async getOneBlogWithId(
+    @Param('id') id: number,
   ): Promise<BlogResponseInterface> {
-    const blog = await this.blogService.getOneBlogWithSlug(slug);
+    const blog = await this.blogService.getOneBlogWithId(id);
     return await this.blogService.buildBlogResponse(blog);
   }
 
-  @Delete(':slug')
+  @Delete(':id')
   @UseGuards(AdminAuthGuard)
-  async deleteOneBlogWithSlug(
+  async deleteOneBlogWithId(
     @Admin() admin: AdminEntity,
-    @Param('slug') slug: string,
+    @Param('id') id: number,
   ): Promise<{ message: string }> {
-    await this.blogService.deleteOneBlogWithSlug(slug, admin);
+    await this.blogService.deleteOneBlogWithId(id, admin);
 
     return {
       message: 'مقاله مورد نظر با موفقیت حذف گردید',
     };
   }
 
-  @Put(':id')
+  @Patch(':id')
   @UseGuards(AdminAuthGuard)
   @UsePipes(new BackendValidationPipe())
   @UseInterceptors(FilesInterceptor('images', 10, multerConfig))

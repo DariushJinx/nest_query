@@ -46,7 +46,9 @@ export class BlogCategoryController {
   }
 
   @Get('list')
-  async getListOfCategories(@Query() query: any) {
+  async getListOfCategories(
+    @Query() query: any,
+  ): Promise<BlogCategoriesResponseInterface> {
     return this.categoryService.getListOfCategories(query);
   }
 

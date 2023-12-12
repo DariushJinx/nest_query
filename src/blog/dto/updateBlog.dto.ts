@@ -5,7 +5,6 @@ export class UpdateBlogDto {
   readonly short_title: string;
   readonly text: string;
   readonly short_text: string;
-  readonly tags?: string[];
   readonly filename?: string;
   @Allow()
   readonly fileUploadPath: string;

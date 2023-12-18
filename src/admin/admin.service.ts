@@ -88,7 +88,18 @@ export class AdminService {
       errors: {},
     };
 
-    const query = `select * from admin where email = '${loginDto.email}' limit 1`;
+    const query = `select a.id,
+    a.first_name,
+    a.last_name,
+    a.username,
+    a.mobile,
+    a.email,
+    a.password,
+    b.title as blog_title,
+    bc.title as blog_category_title
+    from admin a
+    left join blog b on a.id = b.author_id
+    left join blog_category bc on a.id = bc.register_id where email = '${loginDto.email}' limit 1`;
 
     const admins = await this.adminRepository.query(query);
     const admin = admins[0];
@@ -147,7 +158,6 @@ export class AdminService {
     admin.isBan = '1';
 
     await this.adminRepository.save(admin);
-    delete admin.password;
 
     return admin;
   }
@@ -162,26 +172,69 @@ export class AdminService {
 
     let findAll: string;
 
-    findAll = `select * from admin order by id desc`;
+    findAll = `select a.id,
+    a.first_name,
+    a.last_name,
+    a.username,
+    a.mobile,
+    a.email,
+    b.title as blog_title,
+    bc.title as blog_category_title
+    from admin a
+    left join blog b on a.id = b.author_id
+    left join blog_category bc on a.id = bc.register_id
+    order by a.id desc`;
 
     if (query.search) {
-      findAll = `select * from admin where username = '${query.search}'`;
+      findAll = `select a.id,
+      a.first_name,
+      a.last_name,
+      a.username,
+      a.mobile,
+      a.email,
+      b.title as blog_title,
+      bc.title as blog_category_title
+      from admin a
+      left join blog b on a.id = b.author_id
+      left join blog_category bc on a.id = bc.register_id
+      where a.username = '${query.search}'
+      order by a.id desc`;
     }
 
     if (query.limit) {
-      findAll = `select * from admin limit ${query.limit}`;
+      findAll = `select a.id,
+      a.first_name,
+      a.last_name,
+      a.username,
+      a.mobile,
+      a.email,
+      b.title as blog_title,
+      bc.title as blog_category_title
+      from admin a
+      left join blog b on a.id = b.author_id
+      left join blog_category bc on a.id = bc.register_id
+      order by a.id desc
+      limit ${query.limit}`;
     }
 
     if (query.offset) {
-      findAll = `select * from admin offset ${query.offset}`;
+      findAll = `select a.id,
+      a.first_name,
+      a.last_name,
+      a.username,
+      a.mobile,
+      a.email,
+      b.title as blog_title,
+      bc.title as blog_category_title
+      from admin a
+      left join blog b on a.id = b.author_id
+      left join blog_category bc on a.id = bc.register_id
+      order by a.id desc
+      offset ${query.offset}`;
     }
 
     const admins = await this.adminRepository.query(findAll);
     const adminsCount = await this.adminRepository.count();
-
-    admins.forEach((admin: AdminEntity) => {
-      delete admin.password;
-    });
 
     return { admins, adminsCount };
   }
@@ -203,7 +256,15 @@ export class AdminService {
       );
     }
 
-    await this.adminRepository.delete({ id });
+    const query = `delete from admin where id =${id}`;
+
+    const removeAdmin = await this.adminRepository.query(query);
+
+    if (removeAdmin[1] === 0)
+      throw new HttpException(
+        'حذف ادمین با موفقیت انجام نشد',
+        HttpStatus.NOT_FOUND,
+      );
 
     return {
       message: 'ادمین مورد نظر با موفقیت حذف شد',
@@ -211,36 +272,49 @@ export class AdminService {
   }
 
   async findAdminByID(id: number): Promise<AdminEntity> {
-    const query = `select * from admin where id='${id}'`;
+    const query = `select a.id,
+    a.first_name,
+    a.last_name,
+    a.username,
+    a.mobile,
+    a.email,
+    b.title as blog_title,
+    bc.title as blog_category_title
+    from admin a
+    left join blog b on a.id = b.author_id
+    left join blog_category bc on a.id = bc.register_id
+    where a.id= ${id}`;
     const admins = await this.adminRepository.query(query);
 
     const admin = admins[0];
 
     if (!admin) {
-      throw new HttpException(
-        'ادمین مورد نظر یافت نشد',
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new HttpException('ادمین مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
-
-    delete admin.password;
 
     return admin;
   }
 
   async findAdminByEmail(email: string): Promise<AdminEntity> {
-    const query = `select * from admin where email = '${email}' limit 1`;
+    const query = `select a.id,
+    a.first_name,
+    a.last_name,
+    a.username,
+    a.mobile,
+    a.email,
+    b.title as blog_title,
+    bc.title as blog_category_title
+    from admin a
+    left join blog b on a.id = b.author_id
+    left join blog_category bc on a.id = bc.register_id
+    where a.email = '${email}'
+    limit 1`;
     const admins = await this.adminRepository.query(query);
     const admin = admins[0];
 
     if (!admin) {
-      throw new HttpException(
-        'ادمین مورد نظر یافت نشد',
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new HttpException('ادمین مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
-
-    delete admin.password;
 
     return admin;
   }

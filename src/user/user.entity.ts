@@ -41,6 +41,10 @@ export class UserEntity {
   }
 
   @ManyToMany(() => BlogEntity)
-  @JoinTable()
+  @JoinTable({
+    name: 'users_blog',
+    joinColumns: [{ name: 'user_id', referencedColumnName: 'id' }],
+    inverseJoinColumns: [{ name: 'blog_id', referencedColumnName: 'id' }],
+  })
   blog_bookmarks: BlogEntity[];
 }

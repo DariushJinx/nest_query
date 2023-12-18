@@ -105,7 +105,8 @@ export class BlogService {
     from blog
     left join admin a on blog.author_id = a.id
     left join blog_category bc on blog.category_id = bc.id
-    where a.username = '${query.author}'`;
+    where a.username = '${query.author}'
+    order by blog.id desc`;
     }
 
     if (query.search) {
@@ -114,7 +115,8 @@ export class BlogService {
     from blog
     left join admin a on blog.author_id = a.id
     left join blog_category bc on blog.category_id = bc.id
-    where blog.title = '${query.search}'`;
+    where blog.title = '${query.search}'
+    order by blog.id desc`;
     }
 
     if (query.limit) {
@@ -123,6 +125,7 @@ export class BlogService {
     from blog
     left join admin a on blog.author_id = a.id
     left join blog_category bc on blog.category_id = bc.id
+    order by blog.id desc
     limit ${query.limit}`;
     }
 
@@ -132,6 +135,7 @@ export class BlogService {
     from blog
     left join admin a on blog.author_id = a.id
     left join blog_category bc on blog.category_id = bc.id
+    order by blog.id desc
     offset ${query.offset}`;
     }
 
@@ -140,7 +144,9 @@ export class BlogService {
     a.username as register_name,bc.title as category_title
     from blog
     left join admin a on blog.author_id = a.id
-    left join blog_category bc on blog.category_id = bc.id limit ${query.limit}
+    left join blog_category bc on blog.category_id = bc.id
+    order by blog.id desc
+    limit ${query.limit}
     offset ${query.offset}`;
     }
 
@@ -218,15 +224,16 @@ export class BlogService {
   // }
 
   async getOneBlogWithId(id: number): Promise<BlogEntity> {
-    const query = `select blog.*,
-    a.username as register_name,bc.title as category_title
+    const query = `
+    select blog.*,
+    a.username as register_name,
+    bc.title as category_title
     from blog
     left join admin a on blog.author_id = a.id
     left join blog_category bc on blog.category_id = bc.id
     where blog.id = ${id}`;
 
     const blogs = await this.blogRepository.query(query);
-    console.log('blogs: ', blogs);
     const blog = blogs[0];
 
     if (!blog) {
@@ -245,6 +252,12 @@ export class BlogService {
         'شما مجاز به حذف مقاله نیستید',
         HttpStatus.UNAUTHORIZED,
       );
+    }
+
+    const blog = await this.getOneBlogWithId(id);
+
+    if (!blog) {
+      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
     const query = `delete from blog where id = ${id}`;
@@ -283,18 +296,29 @@ export class BlogService {
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    const query = `UPDATE blog SET title = '${updateBlogDto.title}', short_title = '${updateBlogDto.short_title}',
+    if (
+      updateBlogDto.short_title ||
+      updateBlogDto.short_title ||
+      updateBlogDto.text
+    ) {
+      const query = `UPDATE blog SET title = '${updateBlogDto.title}', short_title = '${updateBlogDto.short_title}',
     text = '${updateBlogDto.text}',
     short_text = '${updateBlogDto.short_text}'
     where id = ${id} RETURNING *`;
-    const result = await this.blogRepository.query(query);
+      const result = await this.blogRepository.query(query);
 
-    if (images.length > 0) {
-      result[0][0].images = images;
-      await this.blogRepository.save(result[0][0]);
+      if (images.length > 0) {
+        result[0][0].images = images;
+        await this.blogRepository.save(result[0][0]);
+      }
+    }
+    const blog = await this.getOneBlogWithId(id);
+
+    if (!blog) {
+      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    return result[0][0];
+    return blog;
   }
 
   async favoriteBlog(blogId: number, currentUser: number) {
@@ -313,21 +337,20 @@ export class BlogService {
         (blogInFavorite) => blogInFavorite.id === blog.id,
       ) === -1;
 
-    delete blog.category.id;
-    delete blog.category.images;
-    delete blog.category.register;
-    delete blog.category.parent;
-    delete blog.category.isLast;
-    delete blog.category.tree_cat;
-    delete blog.category.createdAt;
-    delete blog.category.updatedAt;
-    delete blog.author.id;
-    delete blog.author.first_name;
-    delete blog.author.last_name;
-    delete blog.author.mobile;
-    delete blog.author.isBan;
-    delete blog.author.email;
-    delete blog.author.password;
+    // delete blog.category.images;
+    // delete blog.category.register;
+    // delete blog.category.parent;
+    // delete blog.category.isLast;
+    // delete blog.category.tree_cat;
+    // delete blog.category.createdAt;
+    // delete blog.category.updatedAt;
+    // delete blog.author.id;
+    // delete blog.author.first_name;
+    // delete blog.author.last_name;
+    // delete blog.author.mobile;
+    // delete blog.author.isBan;
+    // delete blog.author.email;
+    // delete blog.author.password;
 
     if (isNotFavorite) {
       user.blog_bookmarks.push(blog);

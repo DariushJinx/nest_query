@@ -106,21 +106,26 @@ export class BlogCategoryService {
     a.username as register_name
     from blog_category bc
     left join admin a on bc.register_id = a.id
-    where a.username = '${query.register}'`;
+    where a.username = '${query.register}'
+    order by bc.id desc`;
     }
 
     if (query.limit) {
       findAll = `select bc.*,
     a.username as register_name
     from blog_category bc
-    left join admin a on bc.register_id = a.id limit ${query.limit}`;
+    left join admin a on bc.register_id = a.id 
+    order by bc.id desc
+    limit ${query.limit}`;
     }
 
     if (query.offset) {
       findAll = `select bc.*,
     a.username as register_name
     from blog_category bc
-    left join admin a on bc.register_id = a.id offset ${query.offset}`;
+    left join admin a on bc.register_id = a.id
+    order by bc.id desc
+    offset ${query.offset}`;
     }
 
     const blogCategories = await this.categoryRepository.query(findAll);
@@ -169,7 +174,7 @@ export class BlogCategoryService {
     a.username as register_name
     from blog_category bc
     left join admin a on bc.register_id = a.id
-    order by id desc`;
+    order by bc.id desc`;
 
     const categories: BlogCategoryEntity[] =
       await this.categoryRepository.query(query);
@@ -215,14 +220,14 @@ export class BlogCategoryService {
     a.username as register_name
     from blog_category bc
     left join admin a on bc.register_id = a.id
-    order by id desc`;
+    order by bc.id desc`;
 
     const categories = await this.categoryRepository.query(query);
 
-    categories.forEach((category) => {
-      categories.forEach(async (categoryItem) => {
+    categories.forEach((category: BlogCategoryEntity) => {
+      categories.forEach(async (categoryItem: BlogCategoryEntity) => {
         let status: any;
-        if (category.id === categoryItem.id) {
+        if (category.parent === categoryItem.id) {
           status = 1;
         }
         if (status === 1) {
@@ -278,11 +283,6 @@ export class BlogCategoryService {
       updateCategoryDto.fileUploadPath,
     );
 
-    // UPDATE blog_category SET title = '${updateCategoryDto.title}', images = '${images}' where id = ${id} RETURNING *
-
-    // const query = `UPDATE blog_category SET title = '${updateCategoryDto.title}', images = '${images}' from blog_category
-    // left join admin a on blog_category.register_id = a.id where id = ${id} RETURNING *`;
-
     if (!admin) {
       errorResponse.errors['admin'] =
         'شما مجاز به به روز رسانی دسته بندی نیستید';
@@ -297,7 +297,9 @@ export class BlogCategoryService {
       await this.categoryRepository.save(result[0][0]);
     }
 
-    return result[0][0];
+    const finalResult = await this.getOneCategory(id);
+
+    return finalResult;
   }
 
   async buildCategoryResponse(

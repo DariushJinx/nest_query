@@ -121,6 +121,10 @@ export class UserService {
   async banUser(admin: AdminEntity, id: number) {
     const user = await this.findByID(id);
 
+    if (!user) {
+      throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
     if (!admin) {
       throw new HttpException(
         'شما مجاز به بن کردن کاربر نمی باشید',
@@ -138,7 +142,6 @@ export class UserService {
     user.isBan = '1';
 
     await this.userRepository.save(user);
-    delete user.password;
 
     return user;
   }
@@ -151,9 +154,21 @@ export class UserService {
       );
     }
 
-    await this.findByID(id);
+    const user = await this.findByID(id);
 
-    await this.userRepository.delete({ id });
+    if (!user) {
+      throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    const query = `delete from users where id =${id}`;
+
+    const removeAdmin = await this.userRepository.query(query);
+
+    if (removeAdmin[1] === 0)
+      throw new HttpException(
+        'حذف کاربر با موفقیت انجام نشد',
+        HttpStatus.NOT_FOUND,
+      );
 
     return {
       message: 'کاربر مورد نظر با موفقیت حذف شد',
@@ -170,32 +185,87 @@ export class UserService {
 
     let findAll: string;
 
-    findAll = `select * from users order by id desc`;
+    findAll = `select
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    order by u.id desc`;
 
     if (query.search) {
-      findAll = `select * from users where username = '${query.search}'`;
+      findAll = `select
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    where u.username = '${query.search}'
+    order by u.id desc`;
     }
 
     if (query.limit) {
-      findAll = `select * from users limit ${query.limit}`;
+      findAll = `select
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    order by u.id desc
+    limit ${query.limit}`;
     }
 
     if (query.offset) {
-      findAll = `select * from users offset ${query.offset}`;
+      findAll = `select
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    order by u.id desc
+    offset ${query.offset}`;
     }
 
     const users = await this.userRepository.query(findAll);
     const usersCount = await this.userRepository.count();
 
-    users.forEach((user: UserEntity) => {
-      delete user.password;
-    });
-
     return { users, usersCount };
   }
 
   async findByID(id: number): Promise<UserEntity> {
-    const query = `select * from users where id='${id}' limit 1`;
+    const query = `select
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    where u.id=${id}
+    limit 1`;
 
     const users = await this.userRepository.query(query);
     const user = users[0];
@@ -208,9 +278,29 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<UserEntity> {
-    return await this.userRepository.findOne({
-      where: { email: email },
-    });
+    const query = ` 
+    u.id,
+    u.first_name,
+    u.last_name,
+    u.username,
+    u.mobile,
+    u.email,
+    b.title as blog_title
+    from users u 
+    left join users_blog ub on u.id = ub.user_id
+    left join blog b on ub.blog_id = b.id
+    where u.email=${email}
+    limit 1;`;
+
+    const users = await this.userRepository.query(query);
+
+    const user = users[0];
+
+    if (!user) {
+      throw new HttpException('کاربر مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    return user;
   }
 
   generateJwtToken(user: UserEntity): string {

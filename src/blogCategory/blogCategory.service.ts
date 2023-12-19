@@ -253,6 +253,15 @@ export class BlogCategoryService {
       );
     }
 
+    const category = await this.getOneCategory(id);
+
+    if (!category) {
+      throw new HttpException(
+        'دسته بندی مورد نظر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     const query = `delete from blog_category where id = ${id}`;
 
     const removeCategory = await this.categoryRepository.query(query);
@@ -278,6 +287,18 @@ export class BlogCategoryService {
       errors: {},
     };
 
+    const blogCategory = await this.getOneCategory(id);
+
+    if (!blogCategory) {
+      throw new HttpException(
+        'دسته بندی مورد نظر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let title = blogCategory.title;
+
+    if (updateCategoryDto.title) title = updateCategoryDto.title;
     const images = FunctionUtils.ListOfImagesForRequest(
       files,
       updateCategoryDto.fileUploadPath,
@@ -289,7 +310,7 @@ export class BlogCategoryService {
       errorResponse.errors['statusCode'] = HttpStatus.FORBIDDEN;
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
-    const query = `UPDATE blog_category SET title = '${updateCategoryDto.title}' where id = ${id} RETURNING *`;
+    const query = `UPDATE blog_category SET title = '${title}' where id = ${id} RETURNING *`;
     const result = await this.categoryRepository.query(query);
 
     if (images.length > 0) {
@@ -297,9 +318,7 @@ export class BlogCategoryService {
       await this.categoryRepository.save(result[0][0]);
     }
 
-    const finalResult = await this.getOneCategory(id);
-
-    return finalResult;
+    return result[0][0];
   }
 
   async buildCategoryResponse(

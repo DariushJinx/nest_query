@@ -296,29 +296,32 @@ export class BlogService {
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    if (
-      updateBlogDto.short_title ||
-      updateBlogDto.short_title ||
-      updateBlogDto.text
-    ) {
-      const query = `UPDATE blog SET title = '${updateBlogDto.title}', short_title = '${updateBlogDto.short_title}',
-    text = '${updateBlogDto.text}',
-    short_text = '${updateBlogDto.short_text}'
-    where id = ${id} RETURNING *`;
-      const result = await this.blogRepository.query(query);
-
-      if (images.length > 0) {
-        result[0][0].images = images;
-        await this.blogRepository.save(result[0][0]);
-      }
-    }
     const blog = await this.getOneBlogWithId(id);
 
     if (!blog) {
       throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    return blog;
+    let title = blog.title;
+    let short_title = blog.short_title;
+    let text = blog.text;
+    let short_text = blog.short_text;
+    if (updateBlogDto.title) title = updateBlogDto.title;
+    if (updateBlogDto.short_title) short_title = updateBlogDto.short_title;
+    if (updateBlogDto.text) text = updateBlogDto.text;
+    if (updateBlogDto.short_text) short_text = updateBlogDto.short_text;
+    const query = `UPDATE blog SET title = '${title}', short_title = '${short_title}',
+    text = '${text}',
+    short_text = '${short_text}'
+    where id = ${id} RETURNING *`;
+    const result = await this.blogRepository.query(query);
+
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.blogRepository.save(result[0][0]);
+    }
+
+    return result[0][0];
   }
 
   async favoriteBlog(blogId: number, currentUser: number) {

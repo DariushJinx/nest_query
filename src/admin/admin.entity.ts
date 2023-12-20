@@ -8,6 +8,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { CourseCategoryEntity } from '../courseCategory/courseCategory.entity';
 
 @Entity({ name: 'admin' })
 export class AdminEntity {
@@ -45,4 +46,7 @@ export class AdminEntity {
 
   @OneToMany(() => BlogCategoryEntity, (blog) => blog.register)
   blog_categories: BlogCategoryEntity[];
+
+  @OneToMany(() => CourseCategoryEntity, (category) => category.register)
+  course_categories: CourseCategoryEntity[];
 }

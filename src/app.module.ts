@@ -14,6 +14,7 @@ import { AdminModule } from './admin/admin.module';
 import { BlogCategoryModule } from './blogCategory/blogCategory.module';
 import { BlogModule } from './blog/blog.module';
 import { AuthMiddleware } from './middlewares/auth.middleware';
+import { CourseCategoryModule } from './courseCategory/courseCategory.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuthMiddleware } from './middlewares/auth.middleware';
     AdminModule,
     BlogCategoryModule,
     BlogModule,
+    CourseCategoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

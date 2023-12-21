@@ -15,6 +15,9 @@ import { BlogCategoryModule } from './blogCategory/blogCategory.module';
 import { BlogModule } from './blog/blog.module';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 import { CourseCategoryModule } from './courseCategory/courseCategory.module';
+import { CourseModule } from './course/course.module';
+import { ChapterModule } from './chapter/chapter.module';
+import { EpisodeModule } from './episode/episode.module';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { CourseCategoryModule } from './courseCategory/courseCategory.module';
     BlogCategoryModule,
     BlogModule,
     CourseCategoryModule,
+    CourseModule,
+    ChapterModule,
+    EpisodeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

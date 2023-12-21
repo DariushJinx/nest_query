@@ -69,8 +69,8 @@ export class UserService {
     }
 
     const newUser = new UserEntity();
-    newUser.isBan = '0';
-    if (newUser.isBan === '1') {
+    newUser.is_ban = '0';
+    if (newUser.is_ban === '1') {
       throw new HttpException(
         'شماره تماس وارد شده مسدود می باشد',
         HttpStatus.FORBIDDEN,
@@ -100,7 +100,7 @@ export class UserService {
       throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
-    if (user.isBan === '1') {
+    if (user.is_ban === '1') {
       throw new HttpException(
         'شماره تماس وارد شده مسدود می باشد',
         HttpStatus.UNAUTHORIZED,
@@ -132,14 +132,14 @@ export class UserService {
       );
     }
 
-    if (user.isBan === '1') {
+    if (user.is_ban === '1') {
       throw new HttpException(
         'کاربر مورد نظر مسدود می باشد',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    user.isBan = '1';
+    user.is_ban = '1';
 
     await this.userRepository.save(user);
 
@@ -194,7 +194,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     order by u.id desc`;
 
@@ -208,7 +208,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     where u.username = '${query.search}'
     order by u.id desc`;
@@ -224,7 +224,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     order by u.id desc
     limit ${query.limit}`;
@@ -240,7 +240,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     order by u.id desc
     offset ${query.offset}`;
@@ -262,7 +262,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     where u.id=${id}
     limit 1`;
@@ -287,7 +287,7 @@ export class UserService {
     u.email,
     b.title as blog_title
     from users u 
-    left join users_blog ub on u.id = ub.user_id
+    left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
     where u.email=${email}
     limit 1;`;

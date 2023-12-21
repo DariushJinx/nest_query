@@ -8,6 +8,7 @@ import {
   ManyToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { CourseEntity } from '../course/course.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -27,7 +28,7 @@ export class UserEntity {
   mobile: string;
 
   @Column({ enum: ['0', '1'], default: '0' })
-  isBan: string;
+  is_ban: string;
 
   @Column()
   email: string;
@@ -42,9 +43,17 @@ export class UserEntity {
 
   @ManyToMany(() => BlogEntity)
   @JoinTable({
-    name: 'users_blog',
+    name: 'users_blogs',
     joinColumns: [{ name: 'user_id', referencedColumnName: 'id' }],
     inverseJoinColumns: [{ name: 'blog_id', referencedColumnName: 'id' }],
   })
   blog_bookmarks: BlogEntity[];
+
+  @ManyToMany(() => CourseEntity)
+  @JoinTable({
+    name: 'users_courses',
+    joinColumns: [{ name: 'user_id', referencedColumnName: 'id' }],
+    inverseJoinColumns: [{ name: 'course_id', referencedColumnName: 'id' }],
+  })
+  favorite_courses: CourseEntity[];
 }

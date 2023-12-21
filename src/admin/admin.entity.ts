@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CourseCategoryEntity } from '../courseCategory/courseCategory.entity';
+import { CourseEntity } from '../course/course.entity';
 
 @Entity({ name: 'admin' })
 export class AdminEntity {
@@ -28,7 +29,7 @@ export class AdminEntity {
   mobile: string;
 
   @Column({ enum: ['0', '1'], default: '0' })
-  isBan: string;
+  is_ban: string;
 
   @Column()
   email: string;
@@ -49,4 +50,7 @@ export class AdminEntity {
 
   @OneToMany(() => CourseCategoryEntity, (category) => category.register)
   course_categories: CourseCategoryEntity[];
+
+  @OneToMany(() => CourseEntity, (course) => course.teacher)
+  courses: CourseEntity[];
 }

@@ -3,9 +3,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { AdminEntity } from '../admin/admin.entity';
+import { CourseEntity } from '../course/course.entity';
 
 @Entity({ name: 'course_category' })
 export class CourseCategoryEntity {
@@ -32,6 +34,9 @@ export class CourseCategoryEntity {
 
   @Column({ type: 'json' })
   tree_cat: string[];
+
+  @OneToMany(() => CourseEntity, (course) => course.category)
+  courses: CourseEntity[];
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

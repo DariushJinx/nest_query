@@ -231,9 +231,9 @@ export class BlogCategoryService {
           status = 1;
         }
         if (status === 1) {
-          category.isLast = 0;
+          category.is_last = 0;
         } else {
-          category.isLast = 1;
+          category.is_last = 1;
         }
         await this.categoryRepository.save(category);
       });

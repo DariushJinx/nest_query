@@ -68,8 +68,8 @@ export class AdminService {
     }
 
     const newAdmin = new AdminEntity();
-    newAdmin.isBan = '0';
-    if (newAdmin.isBan === '1') {
+    newAdmin.is_ban = '0';
+    if (newAdmin.is_ban === '1') {
       errorResponse.errors['username'] = 'شماره تماس وارد شده مسدود می باشد';
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
@@ -110,7 +110,7 @@ export class AdminService {
       throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
-    if (admin.isBan === '1') {
+    if (admin.is_ban === '1') {
       errorResponse.errors['admin'] = 'شماره تماس وارد شده مسدود می باشد';
       throw new HttpException(errorResponse, HttpStatus.UNAUTHORIZED);
     }
@@ -148,14 +148,14 @@ export class AdminService {
       );
     }
 
-    if (admin.isBan === '1') {
+    if (admin.is_ban === '1') {
       throw new HttpException(
         'ادمین مورد نظر مسدود می باشد',
         HttpStatus.NOT_FOUND,
       );
     }
 
-    admin.isBan = '1';
+    admin.is_ban = '1';
 
     await this.adminRepository.save(admin);
 

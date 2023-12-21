@@ -205,14 +205,14 @@ export class BlogService {
   //       delete blog.category.images;
   //       delete blog.category.register;
   //       delete blog.category.parent;
-  //       delete blog.category.isLast;
+  //       delete blog.category.is_last;
   //       delete blog.category.tree_cat;
   //       delete blog.category.createdAt;
   //       delete blog.category.updatedAt;
   //       delete blog.author.first_name;
   //       delete blog.author.last_name;
   //       delete blog.author.mobile;
-  //       delete blog.author.isBan;
+  //       delete blog.author.is_ban;
   //       delete blog.author.email;
   //       delete blog.author.password;
   //     });
@@ -343,7 +343,7 @@ export class BlogService {
     // delete blog.category.images;
     // delete blog.category.register;
     // delete blog.category.parent;
-    // delete blog.category.isLast;
+    // delete blog.category.is_last;
     // delete blog.category.tree_cat;
     // delete blog.category.createdAt;
     // delete blog.category.updatedAt;
@@ -351,7 +351,7 @@ export class BlogService {
     // delete blog.author.first_name;
     // delete blog.author.last_name;
     // delete blog.author.mobile;
-    // delete blog.author.isBan;
+    // delete blog.author.is_ban;
     // delete blog.author.email;
     // delete blog.author.password;
 
@@ -394,7 +394,7 @@ export class BlogService {
     delete blog.category.images;
     delete blog.category.register;
     delete blog.category.parent;
-    delete blog.category.isLast;
+    delete blog.category.is_last;
     delete blog.category.tree_cat;
     delete blog.category.createdAt;
     delete blog.category.updatedAt;
@@ -402,7 +402,7 @@ export class BlogService {
     delete blog.author.first_name;
     delete blog.author.last_name;
     delete blog.author.mobile;
-    delete blog.author.isBan;
+    delete blog.author.is_ban;
     delete blog.author.email;
     delete blog.author.password;
 

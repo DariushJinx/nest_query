@@ -33,7 +33,7 @@ export class BlogCategoryEntity {
   parent: number;
 
   @Column({ default: 0 })
-  isLast: number;
+  is_last: number;
 
   @Column({ type: 'json' })
   tree_cat: string[];

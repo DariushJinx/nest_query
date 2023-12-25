@@ -104,65 +104,108 @@ export class CourseService {
   }
 
   async findAllCourses(query: any): Promise<CoursesResponseInterface> {
-    const queryBuilder = this.courseRepository
-      .createQueryBuilder('course')
-      .leftJoinAndSelect('course.teacher', 'teacher');
+    let findAll: string;
+    findAll = `select c.*,
+    cc.title as category_title,
+    a.username as teacher_username
+    from
+    course as c
+    left join course_category cc on c.category_id = cc.id
+    left join admin a on c.teacher_id = a.id
+    order by c.id desc`;
 
     if (query.search) {
-      queryBuilder.andWhere('course.tags LIKE :search', {
-        search: `%${query.search}`,
-      });
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      where c.title = '${query.search}'
+      or cc.title = '${query.search}'
+      or a.username = '${query.search}'
+      order by c.id desc`;
     }
 
     if (query.tag) {
-      queryBuilder.andWhere('course.tags LIKE :tag', {
-        tag: `%${query.tag}`,
-      });
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      where c.tags = '${query.tag}'
+      order by c.id desc`;
     }
 
     if (query.teacher) {
-      const teacher = await this.adminRepository.findOne({
-        where: { username: query.teacher },
-      });
+      const queryTeacher = `select * from admin where username='${query.teacher}'`;
+      const teacher = await this.adminRepository.query(queryTeacher);
 
-      if (!teacher) {
+      if (!teacher.length) {
         throw new HttpException(
           'دوره ای با این مشخصات یافت نشد',
           HttpStatus.UNAUTHORIZED,
         );
       }
 
-      queryBuilder.andWhere('course.teacher_id = :id', {
-        id: teacher.id,
-      });
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      where a.username = '${query.teacher}'
+      order by c.id desc`;
     }
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      order by c.id desc
+      limit ${query.limit}`;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      order by c.id desc
+      offset ${query.offset}`;
     }
 
-    queryBuilder.orderBy('course.createdAt', 'DESC');
+    if (query.offset && query.limit) {
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      order by c.id desc
+      limit ${query.limit}
+      offset ${query.offset}`;
+    }
 
-    const coursesCount = await queryBuilder.getCount();
-    const courses = await queryBuilder.getMany();
+    const courses = await this.courseRepository.query(findAll);
 
     if (!courses.length) {
       throw new HttpException('هیچ دوره ای یافت نشد', HttpStatus.BAD_REQUEST);
     }
+    const coursesCount = await this.courseRepository.count();
 
-    courses.forEach((course) => {
-      delete course.teacher.id;
-      delete course.teacher.first_name;
-      delete course.teacher.last_name;
-      delete course.teacher.mobile;
-      delete course.teacher.is_ban;
-      delete course.teacher.email;
-      delete course.teacher.password;
-    });
     return { courses, coursesCount };
   }
 
@@ -231,51 +274,38 @@ export class CourseService {
   // }
 
   async currentCourse(id: number) {
-    const course = await this.courseRepository.findOne({
-      where: { id: id },
-      relations: ['chapters', 'chapters.episodes'],
-    });
+    const query = `select c.*,
+    a.username as teacher_name,
+    cc.title as category_title,
+    (
+        select array_to_json(array_agg(row_to_json(t)))
+        from (
+            select ch.id,ch.title,ch.text, (
+            select array_to_json(array_agg(row_to_json(t)))
+            from (
+                select
+                e.id,e.title,e.text,e.type,
+                e.time,e.video_address
+                from episode e
+                where e.chapter_id = ch.id
+            ) t
+            ) as episodes
+            from chapter ch
+            where ch.course_id = c.id
+        ) t
+    ) as chapters
+    from
+    course as c
+    left join admin a on c.teacher_id = a.id
+    left join course_category cc on cc.id = c.category_id
+    where c.id = ${id}`;
+    const course = await this.courseRepository.query(query);
 
-    if (!course) {
+    if (!course.length) {
       throw new HttpException('هیچ دوره ای یافت نشد', HttpStatus.BAD_REQUEST);
     }
 
-    delete course.category.images;
-    delete course.category.register;
-    delete course.category.parent;
-    delete course.category.is_last;
-    delete course.category.tree_cat;
-    delete course.category.createdAt;
-    delete course.category.updatedAt;
-    delete course.teacher.first_name;
-    delete course.teacher.last_name;
-    delete course.teacher.mobile;
-    delete course.teacher.is_ban;
-    delete course.teacher.email;
-    delete course.teacher.password;
-    course.chapters.map((chapter) => {
-      delete chapter.course_id;
-      delete chapter.createdAt;
-      delete chapter.updatedAt;
-    });
-    course.chapters.map((chapter) =>
-      chapter.episodes.map((episode) => {
-        delete episode.chapter_id;
-      }),
-    );
-    return course;
-  }
-
-  async getOneCourseWithId(id: number): Promise<CourseEntity> {
-    const course = await this.courseRepository.findOne({
-      where: { id: id },
-    });
-
-    if (!course) {
-      throw new HttpException('هیچ دوره ای یافت نشد', HttpStatus.BAD_REQUEST);
-    }
-
-    return course;
+    return course[0];
   }
 
   async deleteOneCourseWithID(
@@ -290,9 +320,14 @@ export class CourseService {
         HttpStatus.UNAUTHORIZED,
       );
     }
-    await this.getOneCourseWithId(id);
+    await this.currentCourse(id);
 
-    await this.courseRepository.delete({ id });
+    const query = `delete from blog where id = ${id}`;
+
+    const removeCourse = await this.courseRepository.query(query);
+
+    if (removeCourse[1] === 0)
+      throw new HttpException('دوره مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
 
     return {
       message: 'دوره مورد نظر با موفقیت حذف شد',
@@ -319,32 +354,94 @@ export class CourseService {
       updateCourseDto.fileUploadPath,
     );
 
-    Object.assign(course, updateCourseDto);
+    let title = course.title;
+    if (updateCourseDto.title) title = updateCourseDto.title;
+    let short_title = course.short_title;
+    if (updateCourseDto.short_title) short_title = updateCourseDto.short_title;
+    let text = course.text;
+    if (updateCourseDto.text) text = updateCourseDto.text;
+    let short_text = course.short_text;
+    if (updateCourseDto.short_text) short_text = updateCourseDto.short_text;
+    let price = course.price;
+    if (updateCourseDto.price) price = updateCourseDto.price;
+    let discount = course.discount;
+    if (updateCourseDto.discount) discount = updateCourseDto.discount;
+    let type = course.type;
+    if (updateCourseDto.type) type = updateCourseDto.type;
 
-    course.images = images;
+    const query = `UPDATE course SET title = '${title}', short_title = '${short_title}',
+    text = '${text}',
+    short_text = '${short_text}',
+    price = ${price},
+    discount = '${discount}',
+    type = '${type}'
+    where id = ${id} RETURNING *`;
+
+    console.log('updateCourseDto.price  :', updateCourseDto.price);
+    console.log('updateCourseDto.price  :', typeof updateCourseDto.price);
+    console.log('course.type  :', course.type);
+    console.log('course.type  :', typeof course.type);
+    console.log('course.type  :', course.price);
+    console.log('course.price  :', typeof course.price);
+
+    // در ابتدا یه کاری کنیم وقتی تایپ رایگان ذخیره شده نشه تایپ رو عوض کرد
+
+    let result;
 
     if (
-      Number(updateCourseDto.price) > 0 &&
+      (course.price === 0 &&
+        updateCourseDto.type === 'cash' &&
+        !Number(updateCourseDto.price)) ||
+      (course.price === 0 &&
+        updateCourseDto.type === 'special' &&
+        !Number(updateCourseDto.price))
+    ) {
+      throw new HttpException(
+        'تایپ دوره رایگان را نمی توان تغییر داد',
+        HttpStatus.BAD_REQUEST,
+      );
+    } else if (
       course.type === 'free' &&
+      Number(updateCourseDto.price) > 0 &&
+      !updateCourseDto.type
+    ) {
+      throw new HttpException(
+        'قیمت دوره رایگان را نمی توان تغییر داد',
+        HttpStatus.BAD_REQUEST,
+      );
+    } else if (Number(updateCourseDto.price) > 0) {
+      throw new HttpException(
+        'تایپ دوره غیر رایگان را نمی توان تغییر داد',
+        HttpStatus.BAD_REQUEST,
+      );
+    } else if (
+      (course.type === 'cash' && course.price > 0 && !updateCourseDto.type) ||
+      (course.type === 'special' && course.price > 0 && !updateCourseDto.type)
+    ) {
+      throw new HttpException(
+        'قیمت دوره غیر رایگان را نمی توان تغییر داد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (
+      (Number(updateCourseDto.price) > 0 && updateCourseDto.type === 'cash') ||
+      (Number(updateCourseDto.price) > 0 && updateCourseDto.type === 'special')
+    ) {
+      result = await this.courseRepository.query(query);
+    } else if (
+      Number(updateCourseDto.price) === 0 &&
       updateCourseDto.type === 'free'
     ) {
-      throw new HttpException(
-        'برای دوره ی رایگان نمیتوان قیمت ثبت کرد',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (
-      Number(updateCourseDto.price) === 0 &&
-      course.type !== 'free' &&
-      updateCourseDto.type !== 'free'
-    ) {
-      throw new HttpException(
-        'برای دوره ی غیر رایگان باید قیمت تعیین کرد',
-        HttpStatus.BAD_REQUEST,
-      );
+      result = await this.courseRepository.query(query);
     }
 
-    return await this.courseRepository.save(course);
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.courseRepository.save(result[0][0]);
+    }
+
+    return result[0][0];
   }
 
   async favoriteCourse(courseId: number, currentUser: number) {

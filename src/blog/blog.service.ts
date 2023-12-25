@@ -265,10 +265,7 @@ export class BlogService {
     const removeBlog = await this.blogRepository.query(query);
 
     if (removeBlog[1] === 0)
-      throw new HttpException(
-        'دسته بندی مورد نظر یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
 
     return {
       message: 'مقاله مورد نظر با موفقیت حذف گردید',

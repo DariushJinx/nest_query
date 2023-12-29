@@ -81,13 +81,13 @@ export class EpisodeController {
   @UseInterceptors(FileInterceptor('video', multerConfig))
   async updateOneEpisodeWithId(
     @Param('id') id: number,
-    @Admin('id') adminID: number,
+    @Admin() admin: AdminEntity,
     @UploadedFile() file: Express.Multer.File,
     @Body('') updateEpisodeDto: UpdateEpisodeDto,
   ): Promise<EpisodeResponseInterface> {
     const episode = await this.episodeService.updateEpisode(
       id,
-      adminID,
+      admin,
       file,
       updateEpisodeDto,
     );

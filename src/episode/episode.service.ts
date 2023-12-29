@@ -42,7 +42,12 @@ export class EpisodeService {
     delete createEpisodeDto.fileUploadPath;
     Object.assign(episode, createEpisodeDto);
     episode.time = time;
-    episode.video_address = videoURL;
+    episode.video_address = videoURL
+      .replace('\\', '/')
+      .replace('\\', '/')
+      .replace('\\', '/')
+      .replace('\\', '/')
+      .replace('\\', '/');
     episode.user_id = admin.id;
     if (chapter.course_id.teacher.id !== episode.user_id) {
       throw new HttpException(
@@ -54,33 +59,126 @@ export class EpisodeService {
   }
 
   async findAllEpisodes(query: any): Promise<EpisodesResponseInterface> {
-    const queryBuilder = this.episodeRepository.createQueryBuilder('episode');
+    let findAll: string;
+
+    findAll = `
+    select e.*,a.username as register_name,ch.title as chapter_title
+    from episode e
+    left join admin a on e.user_id = a.id
+    left join chapter ch on ch.id = e.chapter_id
+    order by id desc
+    `;
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      findAll = `
+    select e.*,a.username as register_name,ch.title as chapter_title
+    from episode e
+    left join admin a on e.user_id = a.id
+    left join chapter ch on ch.id = e.chapter_id
+    order by id desc
+    limit ${query.limit}
+    `;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      findAll = `
+    select e.*,a.username as register_name,ch.title as chapter_title
+    from episode e
+    left join admin a on e.user_id = a.id
+    left join chapter ch on ch.id = e.chapter_id
+    order by id desc
+    offset ${query.offset}
+    `;
     }
 
-    queryBuilder.orderBy('episode.createdAt', 'DESC');
+    if (query.offset && query.limit) {
+      findAll = `
+    select e.*,a.username as register_name,ch.title as chapter_title
+    from episode e
+    left join admin a on e.user_id = a.id
+    left join chapter ch on ch.id = e.chapter_id
+    order by id desc
+    offset ${query.offset}
+    limit ${query.limit}
+    `;
+    }
 
-    const episodesCount = await queryBuilder.getCount();
-    const episodes = await queryBuilder.getMany();
+    if (query.start && query.end) {
+      const start_split = query.start.split('');
+      const start_split_join = start_split.join('');
+      const end_split = query.end.split('');
+      const end_split_join = end_split.join('');
+      if (
+        query.start.includes(start_split_join) &&
+        query.end.includes(end_split_join)
+      ) {
+        findAll = `
+        select e.*,a.username as register_name,ch.title as chapter_title
+        from episode e
+        left join admin a on e.user_id = a.id
+        left join chapter ch on ch.id = e.chapter_id
+        where e.time >= '${query.start}' and e.time <= '${query.end}'
+        order by id desc
+      `;
+      }
+    }
+
+    if (query.register_name) {
+      const register_name_split = query.register_name.split('');
+      const register_name_split_join = register_name_split.join('');
+      if (query.register_name.includes(register_name_split_join)) {
+        findAll = `
+      select e.*,a.username as register_name,ch.title as chapter_title
+      from episode e
+      left join admin a on e.user_id = a.id
+      left join chapter ch on ch.id = e.chapter_id
+      where a.username like '%${register_name_split_join}%'
+      order by id desc
+    `;
+      }
+    }
+
+    if (query.chapter_title) {
+      const chapter_title_split = query.chapter_title.split('');
+      const chapter_title_split_join = chapter_title_split.join('');
+      if (query.chapter_title.includes(chapter_title_split_join)) {
+        findAll = `
+      select e.*,a.username as register_name,ch.title as chapter_title
+      from episode e
+      left join admin a on e.user_id = a.id
+      left join chapter ch on ch.id = e.chapter_id
+      where ch.title like '%${chapter_title_split_join}%'
+      order by id desc
+    `;
+      }
+    }
+
+    const episodes = await this.episodeRepository.query(findAll);
+
+    if (!episodes.length) {
+      throw new HttpException('هیچ قسمتی یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    const episodesCount = await this.episodeRepository.count();
     return { episodes, episodesCount };
   }
 
   async currentEpisode(id: number) {
-    const episode = await this.episodeRepository.findOne({
-      where: { id: id },
-    });
+    const query = `
+    select e.*,a.username as register_name,ch.title as chapter_title
+    from episode e
+    left join admin a on e.user_id = a.id
+    left join chapter ch on ch.id = e.chapter_id
+    where e.id = ${id}
+    `;
+
+    const episodes = await this.episodeRepository.query(query);
+
+    const episode = episodes[0];
 
     if (!episode) {
       throw new HttpException('قسمت مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
-
-    delete episode.chapter_id.course_id;
 
     return episode;
   }
@@ -91,11 +189,8 @@ export class EpisodeService {
   ): Promise<{
     message: string;
   }> {
-    const chapter = await this.currentEpisode(id);
+    await this.currentEpisode(id);
 
-    if (!chapter) {
-      throw new HttpException('قسمت مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
     if (!admin) {
       throw new HttpException(
         'شما مجاز به حذف قسمت نیستید',
@@ -103,7 +198,11 @@ export class EpisodeService {
       );
     }
 
-    await this.episodeRepository.delete({ id });
+    const query = `
+    delete from episode where id = ${id}
+    `;
+
+    await this.episodeRepository.query(query);
 
     return {
       message: 'قسمت مورد نظر با موفقیت حذف شد',
@@ -112,30 +211,50 @@ export class EpisodeService {
 
   async updateEpisode(
     id: number,
-    currentUserID: number,
+    admin: AdminEntity,
     file: Express.Multer.File,
     updateEpisodeDto: UpdateEpisodeDto,
   ) {
     const episode = await this.currentEpisode(id);
-
-    const fileAddress = join(updateEpisodeDto.fileUploadPath, file.filename);
+    let fileAddress;
+    if (updateEpisodeDto.fileUploadPath && file.filename) {
+      fileAddress = join(updateEpisodeDto.fileUploadPath, file.filename);
+    }
     const videoURL = `http://localhost:3000/${fileAddress}`;
 
-    if (!episode) {
-      throw new HttpException('قسمت مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
-
-    if (episode.user_id !== currentUserID) {
+    if (!admin) {
       throw new HttpException(
         'شما مجاز به تغییر فصل نیستید',
         HttpStatus.FORBIDDEN,
       );
     }
-    delete updateEpisodeDto.filename;
-    delete updateEpisodeDto.fileUploadPath;
-    Object.assign(episode, updateEpisodeDto);
-    episode.video_address = videoURL;
-    return await this.episodeRepository.save(episode);
+
+    let title = episode.title;
+    if (updateEpisodeDto.title) title = updateEpisodeDto.title;
+
+    let text = episode.text;
+    if (updateEpisodeDto.text) text = updateEpisodeDto.text;
+
+    let type = episode.type;
+    if (updateEpisodeDto.type) type = updateEpisodeDto.type;
+
+    const update_query = `
+    update episode set
+    title = '${title}', text = '${text}', type = '${type}'
+    where id = ${id}
+    returning *
+    `;
+    if (updateEpisodeDto.fileUploadPath && file.filename) {
+      episode.video_address = videoURL
+        .replace('\\', '/')
+        .replace('\\', '/')
+        .replace('\\', '/')
+        .replace('\\', '/')
+        .replace('\\', '/');
+    }
+    const episodeResult = await this.episodeRepository.query(update_query);
+
+    return episodeResult[0][0];
   }
 
   async buildEpisodeResponse(

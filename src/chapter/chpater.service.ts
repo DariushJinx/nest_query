@@ -47,35 +47,107 @@ export class ChapterService {
   }
 
   async findAllChapters(query: any): Promise<ChaptersResponseInterface> {
-    const queryBuilder = this.chapterRepository.createQueryBuilder('chapter');
+    let getAll: string;
+
+    getAll = `
+    select ch.*,a.username as admin_username,c.title as category_title
+    from chapter ch
+    left join admin a on a.id = ch.user_id
+    left join course c on c.id = ch.course_id
+    order by ch.id desc
+    `;
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      getAll = `
+    select ch.*,a.username as admin_username,c.title as category_title
+    from chapter ch
+    left join admin a on a.id = ch.user_id
+    left join course c on c.id = ch.course_id
+    order by ch.id desc
+    limit ${query.limit}
+    `;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      getAll = `
+    select ch.*,a.username as admin_username,c.title as category_title
+    from chapter ch
+    left join admin a on a.id = ch.user_id
+    left join course c on c.id = ch.course_id
+    order by ch.id desc
+    offset ${query.offset}
+    `;
     }
 
-    queryBuilder.orderBy('chapter.createdAt', 'DESC');
+    if (query.register_name) {
+      const register_name_split = query.register_name.split('');
+      const register_name_split_join = register_name_split.join('');
+      if (query.register_name.includes(register_name_split_join)) {
+        getAll = `
+        select ch.*,a.username as admin_username,c.title as category_title
+        from chapter ch
+        left join admin a on a.id = ch.user_id
+        left join course c on c.id = ch.course_id
+        where a.username like '%${register_name_split_join}%'
+        order by ch.id desc
+      `;
+      }
+    }
 
-    const chaptersCount = await queryBuilder.getCount();
-    const chapters = await queryBuilder.getMany();
+    if (query.category_title) {
+      const category_title_split = query.category_title.split('');
+      const category_title_split_join = category_title_split.join('');
+      if (query.category_title.includes(category_title_split_join)) {
+        getAll = `
+      select ch.*,a.username as admin_username,c.title as category_title
+      from chapter ch
+      left join admin a on a.id = ch.user_id
+      left join course c on c.id = ch.course_id
+      where c.title like '%${category_title_split_join}%'
+      order by ch.id desc
+    `;
+      }
+    }
+
+    const chapters = await this.courseRepository.query(getAll);
+
+    if (!chapters.length) {
+      throw new HttpException('هیچ قسمتی یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    const chaptersCount = await this.chapterRepository.count();
     return { chapters, chaptersCount };
   }
 
   async currentChapter(id: number) {
-    const chapter = await this.chapterRepository.findOne({
-      where: { id: id },
-      relations: ['episodes'],
-    });
+    const query = `
+        select ch.*,a.username as admin_username,c.title as course_title,
+        coalesce(
+            (
+            select array_to_json(array_agg(row_to_json(t)))
+            from (
+                select
+                e.id,e.title,e.text,e.type,
+                e.time,e.video_address
+                from episode e
+                where e.chapter_id = ch.id
+            ) t
+            ),
+            '[]'::json
+            ) as episodes
+        from
+        chapter as ch
+        left join admin a on ch.user_id = a.id
+        left join course c on c.id = ch.course_id
+        where ch.id = ${id}
+    `;
+    const chapters = await this.chapterRepository.query(query);
 
-    if (!chapter) {
+    if (!chapters.length) {
       throw new HttpException('فصل مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    delete chapter.course_id;
-    chapter.episodes.map((episode) => delete episode.chapter_id);
+    const chapter = chapters[0];
 
     return chapter;
   }
@@ -86,11 +158,8 @@ export class ChapterService {
   ): Promise<{
     message: string;
   }> {
-    const chapter = await this.currentChapter(id);
+    await this.currentChapter(id);
 
-    if (!chapter) {
-      throw new HttpException('فصل مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
     if (!admin) {
       throw new HttpException(
         'شما مجاز به حذف فصل نیستید',
@@ -98,7 +167,12 @@ export class ChapterService {
       );
     }
 
-    await this.chapterRepository.delete({ id });
+    const query = `delete from chapter where id = ${id}`;
+
+    const removeChapter = await this.chapterRepository.query(query);
+
+    if (removeChapter[1] === 0)
+      throw new HttpException('فصل مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
 
     return {
       message: 'فصل مورد نظر با موفقیت حذف شد',
@@ -107,25 +181,31 @@ export class ChapterService {
 
   async updateChapter(
     id: number,
-    adminID: number,
+    admin: AdminEntity,
     updateChapterDto: UpdateChapterDto,
   ) {
     const chapter = await this.currentChapter(id);
 
-    if (!chapter) {
-      throw new HttpException('فصل مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
-
-    if (chapter.user_id !== adminID) {
+    if (!admin) {
       throw new HttpException(
         'شما مجاز به تغییر فصل نیستید',
         HttpStatus.FORBIDDEN,
       );
     }
 
-    Object.assign(chapter, updateChapterDto);
+    let title = chapter.title;
+    if (updateChapterDto.title) title = updateChapterDto.title;
 
-    return await this.chapterRepository.save(chapter);
+    let text = chapter.text;
+    if (updateChapterDto.text) text = updateChapterDto.text;
+
+    const updateQuery = `
+    update chapter set title = '${title}', text = '${text}' where id = ${id}
+    returning *`;
+
+    const updateChapter = await this.chapterRepository.query(updateQuery);
+
+    return updateChapter[0][0];
   }
 
   async buildChapterResponse(

@@ -128,6 +128,30 @@ export class CourseService {
       order by c.id desc`;
     }
 
+    if (query.type) {
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      where c.type = '${query.type}'
+      order by c.id desc`;
+    }
+
+    if (query.first_price && query.second_price) {
+      findAll = `select c.*,
+      cc.title as category_title,
+      a.username as teacher_username
+      from
+      course as c
+      left join course_category cc on c.category_id = cc.id
+      left join admin a on c.teacher_id = a.id
+      where c.price between '${query.first_price}' and '${query.second_price}'
+      order by c.id desc`;
+    }
+
     if (query.tag) {
       findAll = `select c.*,
       cc.title as category_title,
@@ -274,13 +298,17 @@ export class CourseService {
   // }
 
   async currentCourse(id: number) {
-    const query = `select c.*,
+    const query = `
+    select c.*,
     a.username as teacher_name,
     cc.title as category_title,
+    coalesce(
     (
         select array_to_json(array_agg(row_to_json(t)))
         from (
-            select ch.id,ch.title,ch.text, (
+            select ch.id,ch.title,ch.text, 
+            coalesce(
+            (
             select array_to_json(array_agg(row_to_json(t)))
             from (
                 select
@@ -289,10 +317,14 @@ export class CourseService {
                 from episode e
                 where e.chapter_id = ch.id
             ) t
+            ),
+            '[]'::json
             ) as episodes
             from chapter ch
             where ch.course_id = c.id
         ) t
+    ),
+    '[]'::json
     ) as chapters
     from
     course as c

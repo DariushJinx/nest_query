@@ -328,35 +328,29 @@ export class BlogService {
     });
     const blog = await this.getOneBlogWithId(blogId);
 
-    if (!blog) {
-      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    let favorite: any;
+
+    user.blog_bookmarks.map((blogInFavorite) => {
+      favorite = blogInFavorite.id;
+    });
 
     const isNotFavorite =
       user.blog_bookmarks.findIndex(
         (blogInFavorite) => blogInFavorite.id === blog.id,
       ) === -1;
 
-    // delete blog.category.images;
-    // delete blog.category.register;
-    // delete blog.category.parent;
-    // delete blog.category.is_last;
-    // delete blog.category.tree_cat;
-    // delete blog.category.createdAt;
-    // delete blog.category.updatedAt;
-    // delete blog.author.id;
-    // delete blog.author.first_name;
-    // delete blog.author.last_name;
-    // delete blog.author.mobile;
-    // delete blog.author.is_ban;
-    // delete blog.author.email;
-    // delete blog.author.password;
-
     if (isNotFavorite) {
-      user.blog_bookmarks.push(blog);
-      blog.favorites_count++;
-      await this.userRepository.save(user);
-      await this.blogRepository.save(blog);
+      if (favorite === blog.id) {
+        throw new HttpException(
+          'مقاله شما از قبل در لیست علاقه مندی ها موجود می باشد',
+          HttpStatus.BAD_REQUEST,
+        );
+      } else {
+        user.blog_bookmarks.push(blog);
+        blog.favorites_count++;
+        await this.userRepository.save(user);
+        await this.blogRepository.save(blog);
+      }
     }
 
     return blog;
@@ -369,13 +363,14 @@ export class BlogService {
     });
     const blog = await this.getOneBlogWithId(blogId);
 
-    if (!blog) {
-      throw new HttpException('مقاله مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    const blogIndex = user.blog_bookmarks.findIndex((blogInFavorite) => {
+      blogInFavorite.id === blog.id;
+      console.log('blogInFavorite.id:', blogInFavorite.id);
+      console.log('blogInFavorite.id:', blog.id);
+      console.log('blogInFavorite.id:', blogInFavorite.id === blog.id);
+    });
 
-    const blogIndex = user.blog_bookmarks.findIndex(
-      (blogInFavorite) => blogInFavorite.id === blog.id,
-    );
+    console.log('blogIndex:', blogIndex);
 
     if (blogIndex >= 0) {
       user.blog_bookmarks.splice(blogIndex, 1);
@@ -386,22 +381,6 @@ export class BlogService {
       await this.userRepository.save(user);
       await this.blogRepository.save(blog);
     }
-
-    delete blog.category.id;
-    delete blog.category.images;
-    delete blog.category.register;
-    delete blog.category.parent;
-    delete blog.category.is_last;
-    delete blog.category.tree_cat;
-    delete blog.category.createdAt;
-    delete blog.category.updatedAt;
-    delete blog.author.id;
-    delete blog.author.first_name;
-    delete blog.author.last_name;
-    delete blog.author.mobile;
-    delete blog.author.is_ban;
-    delete blog.author.email;
-    delete blog.author.password;
 
     return blog;
   }

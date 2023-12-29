@@ -279,6 +279,7 @@ export class UserService {
 
   async findByEmail(email: string): Promise<UserEntity> {
     const query = ` 
+    select
     u.id,
     u.first_name,
     u.last_name,
@@ -289,8 +290,8 @@ export class UserService {
     from users u 
     left join users_blogs ub on u.id = ub.user_id
     left join blog b on ub.blog_id = b.id
-    where u.email=${email}
-    limit 1;`;
+    where u.email='${email}'
+    limit 1`;
 
     const users = await this.userRepository.query(query);
 

@@ -92,7 +92,7 @@ export class CourseService {
 
     courseCategories.tree_cat.forEach(async (item) => {
       const category = await this.courseCategoryRepository.findOne({
-        where: { id: +item },
+        where: { id: Number(item) },
       });
 
       course.tree_course_name.push(category.title);
@@ -377,64 +377,7 @@ export class CourseService {
     type = '${type}'
     where id = ${id} RETURNING *`;
 
-    console.log('updateCourseDto.price  :', updateCourseDto.price);
-    console.log('updateCourseDto.price  :', typeof updateCourseDto.price);
-    console.log('course.type  :', course.type);
-    console.log('course.type  :', typeof course.type);
-    console.log('course.type  :', course.price);
-    console.log('course.price  :', typeof course.price);
-
-    // در ابتدا یه کاری کنیم وقتی تایپ رایگان ذخیره شده نشه تایپ رو عوض کرد
-
-    let result;
-
-    if (
-      (course.price === 0 &&
-        updateCourseDto.type === 'cash' &&
-        !Number(updateCourseDto.price)) ||
-      (course.price === 0 &&
-        updateCourseDto.type === 'special' &&
-        !Number(updateCourseDto.price))
-    ) {
-      throw new HttpException(
-        'تایپ دوره رایگان را نمی توان تغییر داد',
-        HttpStatus.BAD_REQUEST,
-      );
-    } else if (
-      course.type === 'free' &&
-      Number(updateCourseDto.price) > 0 &&
-      !updateCourseDto.type
-    ) {
-      throw new HttpException(
-        'قیمت دوره رایگان را نمی توان تغییر داد',
-        HttpStatus.BAD_REQUEST,
-      );
-    } else if (Number(updateCourseDto.price) > 0) {
-      throw new HttpException(
-        'تایپ دوره غیر رایگان را نمی توان تغییر داد',
-        HttpStatus.BAD_REQUEST,
-      );
-    } else if (
-      (course.type === 'cash' && course.price > 0 && !updateCourseDto.type) ||
-      (course.type === 'special' && course.price > 0 && !updateCourseDto.type)
-    ) {
-      throw new HttpException(
-        'قیمت دوره غیر رایگان را نمی توان تغییر داد',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (
-      (Number(updateCourseDto.price) > 0 && updateCourseDto.type === 'cash') ||
-      (Number(updateCourseDto.price) > 0 && updateCourseDto.type === 'special')
-    ) {
-      result = await this.courseRepository.query(query);
-    } else if (
-      Number(updateCourseDto.price) === 0 &&
-      updateCourseDto.type === 'free'
-    ) {
-      result = await this.courseRepository.query(query);
-    }
+    const result = await this.courseRepository.query(query);
 
     if (images.length > 0) {
       result[0][0].images = images;
@@ -449,18 +392,32 @@ export class CourseService {
       where: { id: currentUser },
       relations: ['favorite_courses'],
     });
+
     const course = await this.currentCourse(courseId);
 
+    let favorite: any;
+
+    user.favorite_courses.map((courseInFavorite) => {
+      favorite = courseInFavorite.id;
+    });
+
     const isNotFavorite =
-      user.favorite_courses.findIndex(
-        (courseInFavorite) => courseInFavorite.id === course.id,
-      ) === -1;
+      user.favorite_courses.findIndex((courseInFavorite) => {
+        courseInFavorite.id === course.id;
+      }) === -1;
 
     if (isNotFavorite) {
-      user.favorite_courses.push(course);
-      course.favorites_count++;
-      await this.userRepository.save(user);
-      await this.courseRepository.save(course);
+      if (favorite === course.id) {
+        throw new HttpException(
+          'دوره شما از قبل در لیست علاقه مندی ها موجود می باشد',
+          HttpStatus.BAD_REQUEST,
+        );
+      } else {
+        user.favorite_courses.push(course);
+        course.favorites_count++;
+        await this.userRepository.save(user);
+        await this.courseRepository.save(course);
+      }
     }
 
     return course;

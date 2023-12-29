@@ -64,7 +64,7 @@ export class ChapterController {
     await this.chapterService.deleteOneChapterWithID(id, admin);
 
     return {
-      message: 'دوره مورد نظر با موفقیت حذف شد',
+      message: 'فصل مورد نظر با موفقیت حذف شد',
     };
   }
 
@@ -73,12 +73,12 @@ export class ChapterController {
   @UsePipes(new BackendValidationPipe())
   async updateOneChapterWithId(
     @Param('id') id: number,
-    @Admin('id') AdminID: number,
+    @Admin('') admin: AdminEntity,
     @Body('') updateChapterDto: UpdateChapterDto,
   ): Promise<ChapterResponseInterface> {
     const chapter = await this.chapterService.updateChapter(
       id,
-      AdminID,
+      admin,
       updateChapterDto,
     );
     return await this.chapterService.buildChapterResponse(chapter);

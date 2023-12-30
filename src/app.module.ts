@@ -18,6 +18,8 @@ import { CourseCategoryModule } from './courseCategory/courseCategory.module';
 import { CourseModule } from './course/course.module';
 import { ChapterModule } from './chapter/chapter.module';
 import { EpisodeModule } from './episode/episode.module';
+import { ProductCategoryModule } from './productCategory/productCategory.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { EpisodeModule } from './episode/episode.module';
     CourseModule,
     ChapterModule,
     EpisodeModule,
+    ProductCategoryModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [AppService],

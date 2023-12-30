@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CourseEntity } from '../course/course.entity';
+import { ProductEntity } from 'src/product/product.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -48,6 +49,14 @@ export class UserEntity {
     inverseJoinColumns: [{ name: 'blog_id', referencedColumnName: 'id' }],
   })
   blog_bookmarks: BlogEntity[];
+
+  @ManyToMany(() => ProductEntity)
+  @JoinTable({
+    name: 'users_products',
+    joinColumns: [{ name: 'user_id', referencedColumnName: 'id' }],
+    inverseJoinColumns: [{ name: 'product_id', referencedColumnName: 'id' }],
+  })
+  products_bookmarks: ProductEntity[];
 
   @ManyToMany(() => CourseEntity)
   @JoinTable({

@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { CourseCategoryEntity } from '../courseCategory/courseCategory.entity';
 import { CourseEntity } from '../course/course.entity';
+import { ProductCategoryEntity } from '../productCategory/productCategory.entity';
+import { ProductEntity } from '../product/product.entity';
 
 @Entity({ name: 'admin' })
 export class AdminEntity {
@@ -51,6 +53,12 @@ export class AdminEntity {
   @OneToMany(() => CourseCategoryEntity, (category) => category.register)
   course_categories: CourseCategoryEntity[];
 
+  @OneToMany(() => ProductCategoryEntity, (category) => category.register)
+  product_categories: ProductCategoryEntity[];
+
   @OneToMany(() => CourseEntity, (course) => course.teacher)
   courses: CourseEntity[];
+
+  @OneToMany(() => ProductEntity, (product) => product.supplier)
+  products: ProductEntity[];
 }

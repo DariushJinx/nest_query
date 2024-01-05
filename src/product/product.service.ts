@@ -38,7 +38,7 @@ export class ProductService {
     }
 
     const checkExistsCategory = await this.productCategoryRepository.findOne({
-      where: { id: Number(createProductDto.category_id) },
+      where: { id: Number(createProductDto.category) },
     });
 
     if (!checkExistsCategory) {
@@ -81,65 +81,102 @@ export class ProductService {
   }
 
   async findAllProducts(query: any): Promise<ProductsResponseInterface> {
-    const queryBuilder = this.productRepository
-      .createQueryBuilder('product')
-      .leftJoinAndSelect('product.supplier', 'supplier');
+    let getAll: string;
+
+    getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+    `;
 
     if (query.search) {
-      queryBuilder.andWhere('product.tags LIKE :search', {
-        search: `%${query.search}`,
-      });
-    }
-
-    if (query.tag) {
-      queryBuilder.andWhere('product.tags LIKE :tag', {
-        tag: `%${query.tag}`,
-      });
-    }
-
-    if (query.supplier) {
-      const supplier = await this.userRepository.findOne({
-        where: { username: query.supplier },
-      });
-
-      if (!supplier) {
-        throw new HttpException(
-          'محصولی با این مشخصات یافت نشد',
-          HttpStatus.UNAUTHORIZED,
-        );
+      const search_split = query.search.split('');
+      const search_split_join = search_split.join('');
+      if (query.search.includes(search_split_join)) {
+        getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where p.title like '%${search_split_join}%'
+        or p.short_title like '%${search_split_join}%'
+        or p.text like '%${search_split_join}%'
+        or p.short_text like '%${search_split_join}%'
+        order by p.id desc
+        `;
       }
+    }
 
-      queryBuilder.andWhere('product.supplierId = :id', {
-        id: supplier.id,
-      });
+    if (query.supplier_name) {
+      const supplier_name_split = query.supplier_name.split('');
+      const supplier_name_split_join = supplier_name_split.join('');
+      if (query.supplier_name.includes(supplier_name_split_join)) {
+        getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where a.username like '%${supplier_name_split_join}%'
+        order by p.id desc
+        `;
+      }
     }
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        limit ${query.limit}
+      `;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        offset ${query.offset}
+      `;
     }
 
-    queryBuilder.orderBy('product.createdAt', 'DESC');
+    if (query.offset && query.limit) {
+      getAll = `
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        offset ${query.offset}
+        limit ${query.limit}
+      `;
+    }
 
-    const productsCount = await queryBuilder.getCount();
-    const products = await queryBuilder.getMany();
-
-    products.forEach((product) => {
-      delete product.supplier.id;
-      delete product.supplier.first_name;
-      delete product.supplier.last_name;
-      delete product.supplier.mobile;
-      delete product.supplier.is_ban;
-      delete product.supplier.email;
-      delete product.supplier.password;
-    });
+    const products = await this.productRepository.query(getAll);
 
     if (!products.length) {
       throw new HttpException('هیچ محصولی یافت نشد', HttpStatus.BAD_REQUEST);
     }
+
+    const productsCount = await this.productRepository.count();
 
     return { products, productsCount };
   }
@@ -241,12 +278,14 @@ export class ProductService {
       );
     }
 
-    const product = await this.getOneProductWithID(id);
-    if (!product) {
-      throw new HttpException('کالا مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    await this.currentProduct(id);
 
-    await this.productRepository.delete({ id });
+    const query = `delete from chapter where id = ${id}`;
+
+    const removeProduct = await this.productRepository.query(query);
+
+    if (removeProduct[1] === 0)
+      throw new HttpException('محصول مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
 
     return {
       message: 'محصول مورد نظر با موفقیت حذف شد',
@@ -259,11 +298,7 @@ export class ProductService {
     updateProductDto: UpdateProductDto,
     files: Express.Multer.File[],
   ) {
-    const product = await this.getOneProductWithID(id);
-
-    if (!product) {
-      throw new HttpException('product does not exist', HttpStatus.NOT_FOUND);
-    }
+    const product = await this.currentProduct(id);
 
     if (!admin) {
       throw new HttpException(
@@ -277,11 +312,46 @@ export class ProductService {
       updateProductDto.fileUploadPath,
     );
 
-    Object.assign(product, updateProductDto);
+    let title = product.title;
+    if (updateProductDto.title) title = updateProductDto.title;
 
-    product.images = images;
+    let short_title = product.short_title;
+    if (updateProductDto.short_title)
+      short_title = updateProductDto.short_title;
 
-    return await this.productRepository.save(product);
+    let text = product.text;
+    if (updateProductDto.text) text = updateProductDto.text;
+
+    let short_text = product.short_text;
+    if (updateProductDto.short_text) short_text = updateProductDto.short_text;
+
+    let price = product.price;
+    if (updateProductDto.price) price = updateProductDto.price;
+
+    let discount = product.discount;
+    if (updateProductDto.discount) discount = updateProductDto.discount;
+
+    let count = product.count;
+    if (updateProductDto.count) count = updateProductDto.count;
+
+    const query = `UPDATE products
+    SET title = '${title}',
+    short_title = '${short_title}',
+    text = '${text}',
+    short_text = '${short_text}',
+    price = '${price}',
+    discount = '${discount}',
+    count = '${count}'
+    where id = ${id} RETURNING *`;
+
+    const result = await this.productRepository.query(query);
+
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.productRepository.save(result[0][0]);
+    }
+
+    return result[0][0];
   }
 
   async favoriteProduct(productId: number, currentUser: number) {
@@ -289,12 +359,25 @@ export class ProductService {
       where: { id: currentUser },
       relations: ['products_bookmarks'],
     });
-    const product = await this.getOneProductWithID(productId);
+    const product = await this.currentProduct(productId);
+
+    let favorite: any;
+
+    user.products_bookmarks.map((productInFavorite) => {
+      favorite = productInFavorite.id;
+    });
 
     const isNotFavorite =
       user.products_bookmarks.findIndex(
         (productInFavorite) => productInFavorite.id === product.id,
       ) === -1;
+
+    if (favorite === product.id) {
+      throw new HttpException(
+        'محصول شما از قبل در لیست علاقه مندی ها موجود می باشد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
     if (isNotFavorite) {
       user.products_bookmarks.push(product);
@@ -311,7 +394,7 @@ export class ProductService {
       where: { id: currentUser },
       relations: ['products_bookmarks'],
     });
-    const product = await this.getOneProductWithID(productId);
+    const product = await this.currentProduct(productId);
 
     const productIndex = user.products_bookmarks.findIndex(
       (productInFavorite) => productInFavorite.id === product.id,
@@ -326,28 +409,25 @@ export class ProductService {
       await this.userRepository.save(user);
       await this.productRepository.save(product);
     }
-    return product;
   }
 
   async currentProduct(id: number) {
-    const product = await this.productRepository.findOne({
-      where: { id: id },
-      relations: ['features', 'comments'],
-    });
+    const query = `
+    select p.*,
+    a.username as supplier_name,
+    pc.title as product_category_title 
+    from products p
+    left join admin a on p.supplier_id = a.id
+    left join product_category pc on pc.id = p.category_id
+    where p.id= ${id}
+    `;
+    const products = await this.productRepository.query(query);
 
-    delete product.category.images;
-    delete product.category.register;
-    delete product.category.parent;
-    delete product.category.is_last;
-    delete product.category.tree_cat;
-    delete product.category.created_at;
-    delete product.category.updated_at;
-    delete product.supplier.first_name;
-    delete product.supplier.last_name;
-    delete product.supplier.mobile;
-    delete product.supplier.is_ban;
-    delete product.supplier.email;
-    delete product.supplier.password;
+    if (!products.length) {
+      throw new HttpException('محصول مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
+    }
+
+    const product = products[0];
 
     return product;
   }

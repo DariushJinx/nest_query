@@ -9,6 +9,7 @@ import {
 import { CourseCategoryEntity } from '../courseCategory/courseCategory.entity';
 import { AdminEntity } from '../admin/admin.entity';
 import { ChapterEntity } from '../chapter/chapter.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 export enum typeEnum {
   FREE = 'free',
@@ -78,6 +79,9 @@ export class CourseEntity {
   @ManyToOne(() => AdminEntity, (admin) => admin.courses, { eager: true })
   @JoinColumn({ name: 'teacher_id' })
   teacher: AdminEntity;
+
+  @OneToMany(() => CommentEntity, (comment) => comment.course_id)
+  comments: CommentEntity[];
 
   @Column({ default: 0 })
   favorites_count: number;

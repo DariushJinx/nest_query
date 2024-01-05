@@ -3,10 +3,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { AdminEntity } from '../admin/admin.entity';
 import { BlogCategoryEntity } from '../blogCategory/blogCategory.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Entity({ name: 'blog' })
 export class BlogEntity {
@@ -49,6 +51,9 @@ export class BlogEntity {
   @ManyToOne(() => AdminEntity, (admin) => admin.blogs, { eager: true })
   @JoinColumn({ name: 'author_id' })
   author: AdminEntity;
+
+  @OneToMany(() => CommentEntity, (comment) => comment.blog_id)
+  comments: CommentEntity[];
 
   @Column({ default: 0 })
   favorites_count: number;

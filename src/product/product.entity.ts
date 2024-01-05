@@ -3,10 +3,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ProductCategoryEntity } from '../productCategory/productCategory.entity';
 import { AdminEntity } from '../admin/admin.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Entity({ name: 'products' })
 export class ProductEntity {
@@ -61,6 +63,9 @@ export class ProductEntity {
   @ManyToOne(() => AdminEntity, (user) => user.products, { eager: true })
   @JoinColumn({ name: 'supplier_id' })
   supplier: AdminEntity;
+
+  @OneToMany(() => CommentEntity, (comment) => comment.product_id)
+  comments: CommentEntity[];
 
   @Column({ default: 0 })
   favorites_count: number;

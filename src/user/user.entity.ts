@@ -6,10 +6,12 @@ import {
   Entity,
   JoinTable,
   ManyToMany,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { CourseEntity } from '../course/course.entity';
 import { ProductEntity } from '../product/product.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -65,4 +67,7 @@ export class UserEntity {
     inverseJoinColumns: [{ name: 'course_id', referencedColumnName: 'id' }],
   })
   favorite_courses: CourseEntity[];
+
+  @OneToMany(() => CommentEntity, (comment) => comment.user_id)
+  comments: CommentEntity[];
 }

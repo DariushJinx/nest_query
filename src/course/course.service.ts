@@ -354,7 +354,7 @@ export class CourseService {
     }
     await this.currentCourse(id);
 
-    const query = `delete from blog where id = ${id}`;
+    const query = `delete from course where id = ${id}`;
 
     const removeCourse = await this.courseRepository.query(query);
 

@@ -284,3 +284,93 @@ select c.*,
         left join admin a on pc.register_id = a.id
         order by id desc
         offset 1
+
+        select pc.*,a.username as register_name from product_category pc
+        left join admin a on pc.register_id = a.id
+        where pc.id = 1
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where p.title like '%${chapter_title_split_join}%'
+        where p.short_title like '%${chapter_title_split_join}%'
+        where p.text like '%${chapter_title_split_join}%'
+        where p.short_text like '%${chapter_title_split_join}%'
+        order by p.id desc
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where p.tags like '%${chapter_title_split_join}%'
+        order by p.id desc
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where a.username like '%${register_name_split_join}%'
+        order by p.id desc
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        limit 1
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        offset 1
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        order by p.id desc
+        offset 1
+        limit 1
+
+        select p.*,
+        a.username as supplier_name,
+        pc.title as product_category_title 
+        from products p
+        left join admin a on p.supplier_id = a.id
+        left join product_category pc on pc.id = p.category_id
+        where p.title ilike '%an%'
+        order by p.id desc
+
+        UPDATE products p
+        SET p.title = '${title}',
+        p.short_title = '${short_title}',
+        p.text = '${text}',
+        p.short_text = '${short_text}',
+        p.price = 0,
+        p.discount = 0,
+        p.count = 0
+        where p.id = 2 
+        RETURNING p.*

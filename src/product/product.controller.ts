@@ -110,11 +110,12 @@ export class ProductController {
   async deleteProductFromFavorite(
     @User('id') currentUser: number,
     @Param('productId') productId: number,
-  ) {
-    const product = await this.productService.deleteProductFromFavorite(
-      productId,
-      currentUser,
-    );
-    return await this.productService.buildProductResponse(product);
+  ): Promise<{
+    message: string;
+  }> {
+    await this.productService.deleteProductFromFavorite(productId, currentUser);
+    return {
+      message: 'محصول مورد نظر با موفقیت از لیست علاقه مندی های شما حذف گردید',
+    };
   }
 }

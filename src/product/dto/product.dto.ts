@@ -21,7 +21,7 @@ export class CreateProductDto {
   tags: string[];
   @IsDefined({ message: 'آیدی دسته بندی محصول یافت نشد' })
   @Expose()
-  category_id: string;
+  category: string;
   @IsDefined({ message: 'قیمت وارد شده صحیح نمی باشد' })
   @Expose()
   price: number;

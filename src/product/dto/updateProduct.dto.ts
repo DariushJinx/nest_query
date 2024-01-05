@@ -10,18 +10,12 @@ export class UpdateProductDto {
   text: string;
   @Expose()
   short_text: string;
-  @IsOptional()
-  @Expose()
-  tags: string[];
   @Expose()
   price: number;
   @Expose()
   discount: number;
   @Expose()
   count: number;
-  @IsOptional()
-  @Expose()
-  colors: string[];
   @IsOptional()
   @Expose()
   filename: string;

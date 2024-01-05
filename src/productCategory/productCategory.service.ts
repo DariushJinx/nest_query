@@ -92,37 +92,51 @@ export class ProductCategoryService {
   async getListOfCategories(
     query: any,
   ): Promise<ProductCategoriesResponseInterface> {
-    const queryBuilder = this.categoryRepository
-      .createQueryBuilder('productCategory')
-      .leftJoinAndSelect('productCategory.register', 'register');
+    let getAll: string;
 
-    if (query.register) {
-      const register = await this.adminRepository.findOne({
-        where: { username: query.register },
-      });
-      if (!register) {
-        throw new HttpException(
-          'دسته بندی ای با این نویسنده یافت نشد',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      queryBuilder.andWhere('productCategory.registerId = :id', {
-        id: register.id,
-      });
+    getAll = `
+          select pc.*,a.username as register_name from product_category pc
+          left join admin a on pc.register_id = a.id
+          order by id desc
+      `;
+
+    if (query.register_name) {
+      getAll = `
+          select pc.*,a.username as register_name from product_category pc
+          left join admin a on pc.register_id = a.id
+          where a.username = '${query.register_name}'
+          order by id desc
+      `;
     }
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      getAll = `
+      select pc.*,a.username as register_name from product_category pc
+      left join admin a on pc.register_id = a.id
+      order by id desc
+      limit ${query.limit}
+      `;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      getAll = `
+      select pc.*,a.username as register_name from product_category pc
+      left join admin a on pc.register_id = a.id
+      order by id desc
+      offset ${query.offset}
+      `;
     }
 
-    queryBuilder.orderBy('productCategory.createdAt', 'DESC');
-
-    const productCategoriesCount = await queryBuilder.getCount();
-    const productCategories = await queryBuilder.getMany();
+    if (query.offset && query.limit) {
+      getAll = `
+      select pc.*,a.username as register_name from product_category pc
+      left join admin a on pc.register_id = a.id
+      order by id desc
+      offset ${query.offset}
+      limit ${query.limit}
+      `;
+    }
+    const productCategories = await this.categoryRepository.query(getAll);
 
     if (!productCategories.length) {
       throw new HttpException(
@@ -131,22 +145,22 @@ export class ProductCategoryService {
       );
     }
 
-    productCategories.forEach((category) => {
-      delete category.register.id;
-      delete category.register.first_name;
-      delete category.register.last_name;
-      delete category.register.mobile;
-      delete category.register.is_ban;
-      delete category.register.email;
-      delete category.register.password;
-    });
+    const productCategoriesCount = await this.categoryRepository.count();
+
     return { productCategories, productCategoriesCount };
   }
 
   async getOneCategory(id: number) {
-    const category = await this.categoryRepository.findOne({
-      where: { id: id },
-    });
+    const query = `
+        select pc.*,a.username as register_name from product_category pc
+        left join admin a on pc.register_id = a.id
+        where pc.id = ${id}
+        order by id desc
+    `;
+
+    const categories = await this.categoryRepository.query(query);
+
+    const category = categories[0];
 
     if (!category) {
       throw new HttpException(
@@ -154,14 +168,6 @@ export class ProductCategoryService {
         HttpStatus.NOT_FOUND,
       );
     }
-
-    delete category.register.id;
-    delete category.register.first_name;
-    delete category.register.last_name;
-    delete category.register.mobile;
-    delete category.register.is_ban;
-    delete category.register.email;
-    delete category.register.password;
 
     return category;
   }
@@ -174,12 +180,17 @@ export class ProductCategoryService {
       );
     }
 
-    const queryBuilder =
-      this.categoryRepository.createQueryBuilder('productCategory');
+    const getAll: string = `
+    select pc.*,a.username as register_name from product_category pc
+    left join admin a on pc.register_id = a.id
+    order by id desc
+    `;
 
-    queryBuilder.orderBy('productCategory.id', 'DESC');
+    const categories = await this.categoryRepository.query(getAll);
 
-    const categories = await queryBuilder.getMany();
+    if (!categories.length) {
+      throw new HttpException('دسته بندی ایی یافت نشد', HttpStatus.NOT_FOUND);
+    }
 
     categories.forEach(async (item) => {
       item.tree_cat = [];
@@ -218,12 +229,17 @@ export class ProductCategoryService {
       );
     }
 
-    const queryBuilder =
-      this.categoryRepository.createQueryBuilder('productCategory');
+    const getAll: string = `
+    select pc.*,a.username as register_name from product_category pc
+    left join admin a on pc.register_id = a.id
+    order by id desc
+    `;
 
-    queryBuilder.orderBy('productCategory.id', 'DESC');
+    const categories = await this.categoryRepository.query(getAll);
 
-    const categories = await queryBuilder.getMany();
+    if (!categories.length) {
+      throw new HttpException('دسته بندی ایی یافت نشد', HttpStatus.NOT_FOUND);
+    }
 
     categories.forEach(async (category) => {
       let status: any;
@@ -259,7 +275,15 @@ export class ProductCategoryService {
       );
     }
 
-    await this.categoryRepository.delete({ id });
+    const query = `delete from product_category where id = ${id}`;
+
+    const removeCourse = await this.categoryRepository.query(query);
+
+    if (removeCourse[1] === 0)
+      throw new HttpException(
+        'دسته بندی  مورد نظر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
 
     return {
       message: 'دسته بندی مورد نظر با موفقیت حذف گردید',
@@ -290,13 +314,21 @@ export class ProductCategoryService {
       throw new HttpException(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    Object.assign(category, updateCategoryDto);
+    let title = category.title;
+    if (updateCategoryDto.title) title = updateCategoryDto.title;
 
-    category.images = images;
+    const query = `UPDATE product_category
+    SET title = '${title}'
+    where id = ${id} RETURNING *`;
 
-    delete category.register.password;
+    const result = await this.categoryRepository.query(query);
 
-    return await this.categoryRepository.save(category);
+    if (images.length > 0) {
+      result[0][0].images = images;
+      await this.categoryRepository.save(result[0][0]);
+    }
+
+    return result[0][0];
   }
 
   async buildCategoryResponse(

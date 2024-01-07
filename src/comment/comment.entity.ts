@@ -28,9 +28,9 @@ export class CommentEntity {
   parent: number;
 
   @Column({ default: 0 })
-  isLast: number;
+  is_last: number;
 
-  @Column('simple-array')
+  @Column({ type: 'json' })
   tree_comment: string[];
 
   @ManyToOne(() => CourseEntity, (course) => course.comments, {
@@ -42,21 +42,24 @@ export class CommentEntity {
   @ManyToOne(() => ProductEntity, (product) => product.comments, {
     eager: true,
   })
+  @JoinColumn({ name: 'product_id' })
   product_id: ProductEntity;
 
   @ManyToOne(() => BlogEntity, (course) => course.comments, {
     eager: true,
   })
+  @JoinColumn({ name: 'blog_id' })
   blog_id: BlogEntity;
 
   @ManyToOne(() => UserEntity, (user) => user.comments, {
     eager: true,
   })
+  @JoinColumn({ name: 'user_id' })
   user_id: UserEntity;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
+  created_at: Date;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  updatedAt: Date;
+  updated_at: Date;
 }

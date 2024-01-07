@@ -45,10 +45,9 @@ export class CommentController {
 
   @Get('list')
   async findAllComments(
-    @User() currentUser: UserEntity,
     @Query() query: any,
   ): Promise<CommentsResponseInterface> {
-    return await this.commentService.findAllComments(currentUser, query);
+    return await this.commentService.findAllComments(query);
   }
 
   @Get('tree_comment')
@@ -71,16 +70,16 @@ export class CommentController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AdminAuthGuard)
   @UsePipes(new BackendValidationPipe())
   async updateOneCommentWithId(
     @Param('id') id: number,
-    @User('id') currentUserID: number,
+    @Admin() admin: AdminEntity,
     @Body() updateCommentDto: UpdateCommentDto,
   ): Promise<CommentResponseInterface> {
     const comment = await this.commentService.updateComment(
       id,
-      currentUserID,
+      admin,
       updateCommentDto,
     );
     return await this.commentService.buildCommentResponse(comment);

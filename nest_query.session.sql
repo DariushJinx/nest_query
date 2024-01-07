@@ -374,3 +374,116 @@ select c.*,
         p.count = 0
         where p.id = 2 
         RETURNING p.*
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        where u.username like '%l%'
+        order by c.id desc
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        limit 1
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        offset 1
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        offset 1
+        limit 1
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join users u on u.id = c.user_id
+        where b.title like '%f%'
+        order by c.id desc
+
+        select c.*,
+        u.username as username,
+        co.title as course_title
+        from comment c
+        left join course co on co.id = c.course_id
+        left join users u on u.id = c.user_id
+        where co.title like '%es%'
+        order by c.id desc
+
+        select c.*,
+        u.username as username,
+        p.title as product_title
+        from comment c
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        where p.title like '%ny%'
+        order by c.id desc
+
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        where c.id = 1
+
+        update comment set comment = 'ddd', score = 4 where id = 4
+
+        delete from comment where id = 3
+
+        update comment set
+        show = 1
+        where id = 4
+        returning *

@@ -14,8 +14,6 @@ export class CommentService {
   constructor(
     @InjectRepository(CommentEntity)
     private readonly commentRepository: Repository<CommentEntity>,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   async createComment(
@@ -69,46 +67,154 @@ export class CommentService {
     return saveComment;
   }
 
-  async findAllComments(
-    currentUser: UserEntity,
-    query: any,
-  ): Promise<CommentsResponseInterface> {
-    if (!currentUser) {
-      throw new HttpException(
-        'شما می بایست عملیات ورود را انجام دهید',
-        HttpStatus.UNAUTHORIZED,
-      );
+  async findAllComments(query: any): Promise<CommentsResponseInterface> {
+    let getAll: string;
+
+    getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+    `;
+
+    if (query.user_name) {
+      const user_name_split = query.user_name.split('');
+      const user_name_split_join = user_name_split.join('');
+      if (query.user_name.includes(user_name_split_join)) {
+        getAll = `
+          select c.*,
+          u.username as username,
+          b.title as blog_title,
+          co.title as course_title,
+          p.title as product_title
+          from comment c
+          left join blog b on b.id = c.blog_id
+          left join course co on co.id = c.course_id
+          left join products p on p.id = c.product_id
+          left join users u on u.id = c.user_id
+          where u.username like '%${user_name_split_join}%'
+          order by c.id desc
+        `;
+      }
     }
 
-    const queryBuilder = this.commentRepository
-      .createQueryBuilder('comment')
-      .leftJoinAndSelect('comment.user_id', 'user_id');
+    if (query.blog_title) {
+      const blog_title_split = query.blog_title.split('');
+      const blog_title_split_join = blog_title_split.join('');
+      if (query.blog_title.includes(blog_title_split_join)) {
+        getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join users u on u.id = c.user_id
+        where b.title like '%${blog_title_split_join}%'
+        order by c.id desc
+        `;
+      }
+    }
 
-    if (query.user_id) {
-      const user_id = await this.userRepository.findOne({
-        where: { username: query.user_id },
-      });
-      queryBuilder.andWhere('comment.user_id = :id', {
-        id: user_id.id,
-      });
+    if (query.course_title) {
+      const course_title_split = query.course_title.split('');
+      const course_title_split_join = course_title_split.join('');
+      if (query.course_title.includes(course_title_split_join)) {
+        getAll = `
+        select c.*,
+        u.username as username,
+        co.title as course_title
+        from comment c
+        left join course co on co.id = c.course_id
+        left join users u on u.id = c.user_id
+        where co.title like '%${course_title_split_join}%'
+        order by c.id desc
+        `;
+      }
+    }
+
+    if (query.product_title) {
+      const product_title_split = query.product_title.split('');
+      const product_title_split_join = product_title_split.join('');
+      if (query.product_title.includes(product_title_split_join)) {
+        getAll = `
+        select c.*,
+        u.username as username,
+        p.title as product_title
+        from comment c
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        where p.title like '%${product_title_split_join}%'
+        order by c.id desc
+        `;
+      }
     }
 
     if (query.limit) {
-      queryBuilder.limit(query.limit);
+      getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        limit ${query.limit}
+      `;
     }
 
     if (query.offset) {
-      queryBuilder.offset(query.offset);
+      getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        offset ${query.offset}
+      `;
     }
 
-    queryBuilder.orderBy('comment.createdAt', 'DESC');
+    if (query.offset && query.limit) {
+      getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+        offset ${query.offset}
+        limit ${query.limit}
+      `;
+    }
 
-    const commentsCount = await queryBuilder.getCount();
-    const comments = await queryBuilder.getMany();
+    const comments = await this.commentRepository.query(getAll);
 
-    comments.forEach((comment) => {
-      delete comment.user_id;
-    });
+    if (!comments.length) {
+      throw new HttpException('هیچ کامنتی یافت نشد', HttpStatus.BAD_REQUEST);
+    }
+
+    const commentsCount = await this.commentRepository.count();
 
     return { comments, commentsCount };
   }
@@ -121,11 +227,25 @@ export class CommentService {
       );
     }
 
-    const queryBuilder = this.commentRepository.createQueryBuilder('comment');
+    const getAll = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        order by c.id desc
+    `;
 
-    queryBuilder.orderBy('comment.id', 'DESC');
+    const comments = await this.commentRepository.query(getAll);
 
-    const comments = await queryBuilder.getMany();
+    if (!comments.length) {
+      throw new HttpException('هیچ کامنتی یافت نشد', HttpStatus.BAD_REQUEST);
+    }
 
     comments.forEach(async (item) => {
       item.tree_comment = [];
@@ -173,45 +293,60 @@ export class CommentService {
   }
 
   async currentComment(id: number): Promise<CommentEntity> {
-    const comment = await this.commentRepository.findOne({
-      where: { id: id },
-    });
+    const query = `
+        select c.*,
+        u.username as username,
+        b.title as blog_title,
+        co.title as course_title,
+        p.title as product_title
+        from comment c
+        left join blog b on b.id = c.blog_id
+        left join course co on co.id = c.course_id
+        left join products p on p.id = c.product_id
+        left join users u on u.id = c.user_id
+        where c.id = ${id}
+    `;
 
-    if (!comment) {
+    const comments = await this.commentRepository.query(query);
+
+    if (!comments.length) {
       throw new HttpException('کامنتی یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    delete comment.course_id;
-    delete comment.blog_id;
-    delete comment.product_id;
-    delete comment.user_id.first_name;
-    delete comment.user_id.last_name;
-    delete comment.user_id.mobile;
-    delete comment.user_id.is_ban;
-    delete comment.user_id.email;
-    delete comment.user_id.password;
+    const comment = comments[0];
 
     return comment;
   }
 
   async updateComment(
     id: number,
-    currentUserID: number,
+    admin: AdminEntity,
     updateCommentDto: UpdateCommentDto,
   ) {
     const comment = await this.currentComment(id);
 
-    if (!comment) {
-      throw new HttpException('کامنتی یافت  نشد', HttpStatus.NOT_FOUND);
-    }
-
-    if (comment.user_id.id !== currentUserID) {
+    if (!admin) {
       throw new HttpException('شما مجاز نیستید', HttpStatus.FORBIDDEN);
     }
 
-    Object.assign(comment, updateCommentDto);
+    let update_comment = comment.comment;
+    if (updateCommentDto.comment) update_comment = updateCommentDto.comment;
 
-    return await this.commentRepository.save(comment);
+    let update_score = comment.score;
+    if (updateCommentDto.score) update_score = updateCommentDto.score;
+
+    const query = `
+    update comment set
+    comment = '${update_comment}',
+    score = ${update_score},
+    show = 0
+    where id = ${id}
+    returning *
+    `;
+
+    const updateComment = await this.commentRepository.query(query);
+
+    return updateComment[0][0];
   }
 
   async deleteOneComment(
@@ -221,10 +356,7 @@ export class CommentService {
   ): Promise<{
     message: string;
   }> {
-    const comment = await this.currentComment(id);
-    if (!comment) {
-      throw new HttpException('کامنت مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    await this.currentComment(id);
 
     if (user) {
       if (!user) {
@@ -234,7 +366,15 @@ export class CommentService {
         );
       }
 
-      await this.commentRepository.delete({ id });
+      const query = `delete from comment where id = ${id}`;
+
+      const removeCourse = await this.commentRepository.query(query);
+
+      if (removeCourse[1] === 0)
+        throw new HttpException(
+          'کامنت مورد نظر یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
 
       return {
         message: 'کامنت مورد نظر با موفقیت حذف شد',
@@ -247,7 +387,15 @@ export class CommentService {
         );
       }
 
-      await this.commentRepository.delete({ id });
+      const query = `delete from comment where id = ${id}`;
+
+      const removeCourse = await this.commentRepository.query(query);
+
+      if (removeCourse[1] === 0)
+        throw new HttpException(
+          'کامنت مورد نظر یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
 
       return {
         message: 'کامنت مورد نظر با موفقیت حذف شد',
@@ -263,10 +411,8 @@ export class CommentService {
       );
     }
 
-    const existComment = await this.currentComment(id);
-    if (!existComment) {
-      throw new HttpException('کامنت مورد نظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
+    await this.currentComment(id);
+
     if (!admin) {
       throw new HttpException(
         'شما مجاز به نمایش کامنت نیستید',
@@ -274,9 +420,16 @@ export class CommentService {
       );
     }
 
-    await this.commentRepository.update({ id: existComment.id }, { show: 1 });
+    const query = `
+    update comment set
+    show = 1
+    where id = ${id}
+    returning *
+    `;
 
-    return { ...existComment, show: 1 };
+    const updateComment = await this.commentRepository.query(query);
+
+    return updateComment[0][0];
   }
 
   async buildCommentResponse(

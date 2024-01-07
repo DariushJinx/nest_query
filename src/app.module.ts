@@ -20,6 +20,7 @@ import { ChapterModule } from './chapter/chapter.module';
 import { EpisodeModule } from './episode/episode.module';
 import { ProductCategoryModule } from './productCategory/productCategory.module';
 import { ProductModule } from './product/product.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ProductModule } from './product/product.module';
     EpisodeModule,
     ProductCategoryModule,
     ProductModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

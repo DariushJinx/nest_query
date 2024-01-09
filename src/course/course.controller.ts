@@ -52,10 +52,10 @@ export class CourseController {
     return await this.courseService.findAllCourses(query);
   }
 
-  // @Get('all_courses')
-  // async findAllCoursesWithRating() {
-  //   return await this.courseService.findAllCoursesWithRating();
-  // }
+  @Get('all_courses')
+  async findAllCoursesWithRating() {
+    return await this.courseService.findAllCoursesWithRating();
+  }
 
   @Get(':id')
   async getOneCourse(

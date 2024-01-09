@@ -8,7 +8,8 @@ import { CourseCategoryEntity } from '../courseCategory/CourseCategory.entity';
 import { AdminEntity } from '../admin/admin.entity';
 import { AdminService } from '../admin/admin.service';
 import { ChapterEntity } from '../chapter/chapter.entity';
-import { AdminAuthMiddleware } from 'src/middlewares/auth.admin.middleware';
+import { AdminAuthMiddleware } from '../middlewares/auth.admin.middleware';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AdminAuthMiddleware } from 'src/middlewares/auth.admin.middleware';
       ChapterEntity,
       CourseCategoryEntity,
       AdminEntity,
+      CommentEntity,
     ]),
   ],
   controllers: [CourseController],

@@ -9,7 +9,8 @@ import { CoursesResponseInterface } from './types/coursesResponse.interface';
 import { UpdateCourseDto } from './dto/updateCourse.dto';
 import { CourseResponseInterface } from './types/courseResponse.interface';
 import { CourseCategoryEntity } from '../courseCategory/courseCategory.entity';
-import { AdminEntity } from 'src/admin/admin.entity';
+import { AdminEntity } from '../admin/admin.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Injectable()
 export class CourseService {
@@ -22,6 +23,8 @@ export class CourseService {
     private readonly adminRepository: Repository<AdminEntity>,
     @InjectRepository(CourseCategoryEntity)
     private readonly courseCategoryRepository: Repository<CourseCategoryEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
   ) {}
 
   async createCourse(
@@ -233,69 +236,58 @@ export class CourseService {
     return { courses, coursesCount };
   }
 
-  // async findAllCoursesWithRating() {
-  //   const courses = await this.courseRepository.find();
-  //   const comments = await this.commentRepository.find({
-  //     where: { show: 1 },
-  //   });
+  async findAllCoursesWithRating() {
+    const findAll: string = `select c.*,
+    cc.title as category_title,
+    a.username as teacher_username
+    from
+    course as c
+    left join course_category cc on c.category_id = cc.id
+    left join admin a on c.teacher_id = a.id
+    order by c.id desc`;
 
-  //   if (!courses.length) {
-  //     throw new HttpException('هیچ دوره ای یافت نشد', HttpStatus.BAD_REQUEST);
-  //   }
+    const commentQuery = `
+      select * from comment where show = 1
+    `;
+    const comments = await this.commentRepository.query(commentQuery);
 
-  //   const allCourses = [];
+    const courses = await this.courseRepository.query(findAll);
 
-  //   courses.map(async (course) => {
-  //     let courseTotalScore: number = 5;
-  //     const courseScores = comments?.filter((comment) => {
-  //       if (comment.course_id) {
-  //         if (comment.course_id.id.toString() === course.id.toString()) {
-  //           return comment;
-  //         }
-  //       }
-  //     });
+    if (!courses.length) {
+      throw new HttpException('هیچ دوره ای یافت نشد', HttpStatus.BAD_REQUEST);
+    }
 
-  //     courseScores.forEach((comment) => {
-  //       courseTotalScore += Number(comment.score);
-  //     });
-  //     let average = ~~(courseTotalScore / (courseScores.length + 1));
-  //     if (average < 0) {
-  //       average = 0;
-  //     } else if (average > 5) {
-  //       average = 5;
-  //     }
-  //     allCourses.push({
-  //       ...course,
-  //       courseAverageScore: average,
-  //     });
+    const allCourses = [];
 
-  //     courses.forEach((course) => {
-  //       delete course.teacher.password;
-  //       delete course.category.register;
-  //       delete course.category.images;
-  //     });
+    courses.map(async (course) => {
+      let courseTotalScore: number = 5;
+      const courseScores = comments?.filter((comment) => {
+        if (comment.course_id) {
+          if (comment.course_id === course.id) {
+            return comment;
+          }
+        }
+      });
 
-  //     courses.forEach((course) => {
-  //       delete course.category.images;
-  //       delete course.category.register;
-  //       delete course.category.parent;
-  //       delete course.category.is_last;
-  //       delete course.category.tree_cat;
-  //       delete course.category.createdAt;
-  //       delete course.category.updatedAt;
-  //       delete course.teacher.first_name;
-  //       delete course.teacher.last_name;
-  //       delete course.teacher.mobile;
-  //       delete course.teacher.is_ban;
-  //       delete course.teacher.email;
-  //       delete course.teacher.password;
-  //     });
+      courseScores.forEach((comment) => {
+        courseTotalScore += Number(comment.score);
+      });
+      let average = ~~(courseTotalScore / (courseScores.length + 1));
+      if (average < 0) {
+        average = 0;
+      } else if (average > 5) {
+        average = 5;
+      }
+      allCourses.push({
+        ...course,
+        course_average_score: average,
+      });
 
-  //     await this.courseRepository.save(allCourses);
-  //   });
+      await this.courseRepository.save(allCourses);
+    });
 
-  //   return allCourses;
-  // }
+    return allCourses;
+  }
 
   async currentCourse(id: number) {
     const query = `

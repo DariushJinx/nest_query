@@ -10,6 +10,7 @@ import { BlogsResponseInterface } from './types/blogsResponse.interface';
 import { UpdateBlogDto } from './dto/updateBlog.dto';
 import { AdminEntity } from '../admin/admin.entity';
 import { BlogCategoryEntity } from '../blogCategory/blogCategory.entity';
+import { CommentEntity } from 'src/comment/comment.entity';
 
 @Injectable()
 export class BlogService {
@@ -22,6 +23,8 @@ export class BlogService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(AdminEntity)
     private readonly adminRepository: Repository<AdminEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
   ) {}
 
   async createBlog(
@@ -164,64 +167,57 @@ export class BlogService {
     return { blogs, blogsCount };
   }
 
-  // async findAllBlogsWithRating() {
-  //   const blogs = await this.blogRepository.find();
+  async findAllBlogsWithRating() {
+    const findAll = `select blog.*,
+    a.username as register_name,bc.title as category_title
+    from blog
+    left join admin a on blog.author_id = a.id
+    left join blog_category bc on blog.category_id = bc.id
+    order by blog.id desc`;
 
-  //   if (!blogs.length) {
-  //     throw new HttpException('مقاله ای یافت نشد', HttpStatus.NOT_FOUND);
-  //   }
+    const blogs = await this.blogRepository.query(findAll);
 
-  //   const comments = await this.commentRepository.find({
-  //     where: { show: 1 },
-  //   });
+    if (!blogs.length) {
+      throw new HttpException('مقاله ای یافت نشد', HttpStatus.NOT_FOUND);
+    }
 
-  //   const allBlogs = [];
+    const commentsQuery: string = `
+    select * from comment where show = 1
+    `;
 
-  //   blogs.map(async (blog) => {
-  //     let blogTotalScore: number = 5;
-  //     const blogScores = comments?.filter((comment) => {
-  //       if (comment.blog_id) {
-  //         if (comment.blog_id.id.toString() === blog.id.toString()) {
-  //           return comment;
-  //         }
-  //       }
-  //     });
+    const comments = await this.commentRepository.query(commentsQuery);
 
-  //     blogScores.forEach((comment) => {
-  //       blogTotalScore += Number(comment.score);
-  //     });
-  //     let average = ~~(blogTotalScore / (blogScores.length + 1));
-  //     if (average < 0) {
-  //       average = 0;
-  //     } else if (average > 5) {
-  //       average = 5;
-  //     }
-  //     allBlogs.push({
-  //       ...blog,
-  //       blogAverageScore: average,
-  //     });
+    const allBlogs = [];
 
-  //     blogs.forEach((blog) => {
-  //       delete blog.category.images;
-  //       delete blog.category.register;
-  //       delete blog.category.parent;
-  //       delete blog.category.is_last;
-  //       delete blog.category.tree_cat;
-  //       delete blog.category.createdAt;
-  //       delete blog.category.updatedAt;
-  //       delete blog.author.first_name;
-  //       delete blog.author.last_name;
-  //       delete blog.author.mobile;
-  //       delete blog.author.is_ban;
-  //       delete blog.author.email;
-  //       delete blog.author.password;
-  //     });
+    blogs.map(async (blog) => {
+      let blogTotalScore: number = 5;
+      const blogScores = comments?.filter((comment) => {
+        if (comment.blog_id) {
+          if (comment.blog_id === blog.id) {
+            return comment;
+          }
+        }
+      });
 
-  //     await this.blogRepository.save(allBlogs);
-  //   });
+      blogScores.forEach((comment) => {
+        blogTotalScore += Number(comment.score);
+      });
+      let average = ~~(blogTotalScore / (blogScores.length + 1));
+      if (average < 0) {
+        average = 0;
+      } else if (average > 5) {
+        average = 5;
+      }
+      allBlogs.push({
+        ...blog,
+        blog_average_score: average,
+      });
 
-  //   return allBlogs;
-  // }
+      await this.blogRepository.save(allBlogs);
+    });
+
+    return allBlogs;
+  }
 
   async getOneBlogWithId(id: number): Promise<BlogEntity> {
     const query = `

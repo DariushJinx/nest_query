@@ -49,10 +49,10 @@ export class BlogController {
     return await this.blogService.findAllBlogs(query);
   }
 
-  // @Get('all_blogs')
-  // async findAllBlogsWithRating() {
-  //   return await this.blogService.findAllBlogsWithRating();
-  // }
+  @Get('all_blogs')
+  async findAllBlogsWithRating() {
+    return await this.blogService.findAllBlogsWithRating();
+  }
 
   @Get(':id')
   async getOneBlogWithId(

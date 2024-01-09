@@ -13,6 +13,7 @@ import { AdminEntity } from '../admin/admin.entity';
 import { AdminService } from '../admin/admin.service';
 import { BlogCategoryEntity } from '../blogCategory/blogCategory.entity';
 import { AdminAuthMiddleware } from '../middlewares/auth.admin.middleware';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AdminAuthMiddleware } from '../middlewares/auth.admin.middleware';
       UserEntity,
       AdminEntity,
       BlogCategoryEntity,
+      CommentEntity,
     ]),
   ],
   controllers: [BlogController],

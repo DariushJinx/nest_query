@@ -13,6 +13,7 @@ import { ProductCategoryEntity } from '../productCategory/productCategory.entity
 import { AdminEntity } from '../admin/admin.entity';
 import { AdminService } from '../admin/admin.service';
 import { AdminAuthMiddleware } from '../middlewares/auth.admin.middleware';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AdminAuthMiddleware } from '../middlewares/auth.admin.middleware';
       UserEntity,
       AdminEntity,
       ProductCategoryEntity,
+      CommentEntity,
     ]),
   ],
   controllers: [ProductController],

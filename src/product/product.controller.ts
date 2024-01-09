@@ -54,10 +54,10 @@ export class ProductController {
     return await this.productService.findAllProducts(query);
   }
 
-  // @Get('all_products')
-  // async findAllProductsWithRating() {
-  //   return await this.productService.findAllProductsWithRating();
-  // }
+  @Get('all_products')
+  async findAllProductsWithRating() {
+    return await this.productService.findAllProductsWithRating();
+  }
 
   @Get(':id')
   async getOneProduct(

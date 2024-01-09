@@ -8,8 +8,9 @@ import { CreateProductDto } from './dto/product.dto';
 import { FunctionUtils } from '../utils/functions.utils';
 import { ProductsResponseInterface } from './types/productsResponse.interface';
 import { UpdateProductDto } from './dto/updateProduct.dto';
-import { ProductCategoryEntity } from 'src/productCategory/productCategory.entity';
-import { AdminEntity } from 'src/admin/admin.entity';
+import { ProductCategoryEntity } from '../productCategory/productCategory.entity';
+import { AdminEntity } from '../admin/admin.entity';
+import { CommentEntity } from '../comment/comment.entity';
 
 @Injectable()
 export class ProductService {
@@ -20,6 +21,8 @@ export class ProductService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(ProductCategoryEntity)
     private readonly productCategoryRepository: Repository<ProductCategoryEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
   ) {}
 
   async createProduct(
@@ -181,63 +184,59 @@ export class ProductService {
     return { products, productsCount };
   }
 
-  // async findAllProductsWithRating() {
-  //   const products = await this.productRepository.find();
-  //   const comments = await this.commentRepository.find({
-  //     where: { show: 1 },
-  //   });
+  async findAllProductsWithRating() {
+    const getAll: string = `
+    select p.*,
+    a.username as supplier_name,
+    pc.title as product_category_title 
+    from products p
+    left join admin a on p.supplier_id = a.id
+    left join product_category pc on pc.id = p.category_id
+    order by p.id desc
+`;
+    const products = await this.productRepository.query(getAll);
 
-  //   if (!products.length) {
-  //     throw new HttpException('هیچ محصولی یافت نشد', HttpStatus.BAD_REQUEST);
-  //   }
+    const commentQuery = `
+      select * from comment where show = 1
+    `;
 
-  //   const allProducts = [];
+    const comments = await this.commentRepository.query(commentQuery);
 
-  //   products.map(async (product) => {
-  //     let productTotalScore: number = 5;
-  //     const productScores = comments?.filter((comment) => {
-  //       if (comment.product_id) {
-  //         if (comment.product_id.id.toString() === product.id.toString()) {
-  //           return comment;
-  //         }
-  //       }
-  //     });
+    if (!products.length) {
+      throw new HttpException('هیچ محصولی یافت نشد', HttpStatus.BAD_REQUEST);
+    }
 
-  //     productScores.forEach((comment) => {
-  //       productTotalScore += Number(comment.score);
-  //     });
-  //     let average = ~~(productTotalScore / (productScores.length + 1));
-  //     if (average < 0) {
-  //       average = 0;
-  //     } else if (average > 5) {
-  //       average = 5;
-  //     }
-  //     allProducts.push({
-  //       ...product,
-  //       productAverageScore: average,
-  //     });
+    const allProducts = [];
 
-  //     products.forEach((product) => {
-  //       delete product.category.images;
-  //       delete product.category.register;
-  //       delete product.category.parent;
-  //       delete product.category.isLast;
-  //       delete product.category.tree_cat;
-  //       delete product.category.createdAt;
-  //       delete product.category.updatedAt;
-  //       delete product.supplier.first_name;
-  //       delete product.supplier.last_name;
-  //       delete product.supplier.mobile;
-  //       delete product.supplier.is_ban;
-  //       delete product.supplier.email;
-  //       delete product.supplier.password;
-  //     });
+    products.map(async (product) => {
+      let productTotalScore: number = 5;
+      const productScores = comments?.filter((comment) => {
+        if (comment.product_id) {
+          if (comment.product_id.toString() === product.id.toString()) {
+            return comment;
+          }
+        }
+      });
 
-  //     await this.productRepository.save(allProducts);
-  //   });
+      productScores.forEach((comment) => {
+        productTotalScore += Number(comment.score);
+      });
+      let average = ~~(productTotalScore / (productScores.length + 1));
+      if (average < 0) {
+        average = 0;
+      } else if (average > 5) {
+        average = 5;
+      }
+      allProducts.push({
+        ...product,
+        product_average_score: average,
+      });
 
-  //   return allProducts;
-  // }
+      await this.productRepository.save(allProducts);
+    });
+
+    return allProducts;
+  }
 
   async getOneProductWithID(id: number): Promise<ProductEntity> {
     const product = await this.productRepository.findOne({

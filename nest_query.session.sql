@@ -487,3 +487,12 @@ select c.*,
         show = 1
         where id = 4
         returning *
+
+        select * from comment where show = 1
+
+        select blog.*,
+        a.username as register_name,bc.title as category_title
+        from blog
+        left join admin a on blog.author_id = a.id
+        left join blog_category bc on blog.category_id = bc.id
+        order by blog.id desc

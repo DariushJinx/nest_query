@@ -21,6 +21,7 @@ import { EpisodeModule } from './episode/episode.module';
 import { ProductCategoryModule } from './productCategory/productCategory.module';
 import { ProductModule } from './product/product.module';
 import { CommentModule } from './comment/comment.module';
+import { FeatureModule } from './features/feature.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CommentModule } from './comment/comment.module';
     ProductCategoryModule,
     ProductModule,
     CommentModule,
+    FeatureModule,
   ],
   controllers: [AppController],
   providers: [AppService],

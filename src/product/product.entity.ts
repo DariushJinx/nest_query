@@ -9,6 +9,7 @@ import {
 import { ProductCategoryEntity } from '../productCategory/productCategory.entity';
 import { AdminEntity } from '../admin/admin.entity';
 import { CommentEntity } from '../comment/comment.entity';
+import { FeatureEntity } from '../features/feature.entity';
 
 @Entity({ name: 'products' })
 export class ProductEntity {
@@ -66,6 +67,9 @@ export class ProductEntity {
 
   @OneToMany(() => CommentEntity, (comment) => comment.product_id)
   comments: CommentEntity[];
+
+  @OneToMany(() => FeatureEntity, (feature) => feature.product_id)
+  features: FeatureEntity[];
 
   @Column({ default: 0 })
   favorites_count: number;
